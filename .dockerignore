@@ -1,0 +1,4 @@
+host-agent/target/
+node_modules/
+.git/
+*.log

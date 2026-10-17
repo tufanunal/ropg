@@ -1,0 +1,20 @@
+# Rust build artifacts
+target/
+host-agent/target/
+**/*.rs.bk
+Cargo.lock.bak
+
+# Node dependencies & logs
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment and local settings
+.env
+rogp_settings.json
+
+# IDE and OS files
+.DS_Store
+Thumbs.db
+*.log
