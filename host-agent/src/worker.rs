@@ -181,10 +181,7 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
 
                 // 7. Send to Relay
                 match current_client.send_screen(is_bin, &payload) {
-                    Ok(sync_requested) => {
-                        if sync_requested {
-                            state.force_full_sync.store(true, Ordering::Relaxed);
-                        }
+                    Ok(_) => {
                         let mut m = state.metrics.lock().unwrap();
                         m.is_connected = true;
                         m.last_seen_status = format!("Transmitted {} cells ({} bytes) [{}]", dirty_count, byte_len, if is_bin { "BINARY" } else { "JSON" });

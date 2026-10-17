@@ -214,12 +214,13 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
+      const fullSync = host.fullSyncRequested;
+      host.fullSyncRequested = false;
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({
         status: 'ok',
-        fullSyncRequested: host.fullSyncRequested
+        fullSyncRequested: fullSync
       }));
-      // Reset fullSync flag once acknowledged
       return;
     }
 

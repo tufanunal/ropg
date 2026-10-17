@@ -93,6 +93,7 @@ class RogpViewerApp {
       modeSelect.addEventListener('change', async () => {
         this.lastModeChangeTime = Date.now();
         this.preferredMode = modeSelect.value;
+        modeSelect.blur();
         await this.sendConfig({ mode: this.preferredMode });
       });
     }
@@ -111,6 +112,7 @@ class RogpViewerApp {
     if (qualitySelect) {
       qualitySelect.addEventListener('change', async () => {
         const quality = parseInt(qualitySelect.value, 10);
+        qualitySelect.blur();
         await this.sendConfig({ quality });
       });
     }
@@ -158,6 +160,9 @@ class RogpViewerApp {
 
     const closeDock = () => {
       if (dockOverlay) dockOverlay.classList.add('hidden');
+      if (document.activeElement && typeof document.activeElement.blur === 'function') {
+        document.activeElement.blur();
+      }
       startTriggerFadeTimer();
     };
 
