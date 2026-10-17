@@ -68,7 +68,9 @@ export class SmartInputHandler {
   }
 
   initEvents() {
+    const catcher = document.getElementById('mouse-catcher');
     const stage = document.getElementById('main-stage') || this.viewport;
+    const targets = [catcher, this.viewport, stage].filter(Boolean);
 
     // Mouse Move (Drag vs Hover)
     const handleMove = (e) => {
@@ -116,9 +118,6 @@ export class SmartInputHandler {
       const dockOverlay = document.getElementById('main-dock-overlay');
       if (dockOverlay && !dockOverlay.classList.contains('hidden')) return;
 
-      // Ignore if clicking on trigger button or telemetry modal
-      if (e.target.closest('#main-dock-trigger') || e.target.closest('#telemetry-modal')) return;
-
       e.preventDefault();
       this.isMouseDown = true;
       this.activeButton = e.button; // 0: left, 1: middle, 2: right
@@ -153,7 +152,6 @@ export class SmartInputHandler {
       if (!this.enabled) return;
       const dockOverlay = document.getElementById('main-dock-overlay');
       if (dockOverlay && !dockOverlay.classList.contains('hidden')) return;
-      if (e.target.closest('#main-dock-trigger') || e.target.closest('#telemetry-modal')) return;
 
       e.preventDefault();
       const { x, y } = this.mapCoordinates(e);
@@ -168,30 +166,48 @@ export class SmartInputHandler {
       });
     };
 
-    this.viewport.addEventListener('mousemove', handleMove);
-    this.viewport.addEventListener('mousedown', handleDown);
-    this.viewport.addEventListener('wheel', handleWheel, { passive: false });
-    this.viewport.addEventListener('contextmenu', (e) => e.preventDefault());
+    targets.forEach((el) => {
+      el.addEventListener('mousemove', handleMove);
+      el.addEventListener('mousedown', handleDown);
+      el.addEventListener('wheel', handleWheel, { passive: false });
+      el.addEventListener('contextmenu', (e) => e.preventDefault());
+    });
 
-    if (stage && stage !== this.viewport) {
-      stage.addEventListener('mousemove', handleMove);
-      stage.addEventListener('mousedown', handleDown);
-      stage.addEventListener('wheel', handleWheel, { passive: false });
-      stage.addEventListener('contextmenu', (e) => e.preventDefault());
-    }
-
-    this.viewport.addEventListener('mouseleave', () => {
+    const handleMouseLeave = () => {
       this.updateSyntheticCursor(0, 0, false);
       if (this.hoverDebounceTimer) {
         clearTimeout(this.hoverDebounceTimer);
       }
-    });
+    };
+
+    if (catcher) catcher.addEventListener('mouseleave', handleMouseLeave);
+    this.viewport.addEventListener('mouseleave', handleMouseLeave);
 
     window.addEventListener('mouseup', handleUp);
+
+    // Safeguard: Release mouse if window loses focus
+    window.addEventListener('blur', () => {
+      if (this.isMouseDown) {
+        this.isMouseDown = false;
+        this.sendInput({
+          seqId: this.nextSeqId(),
+          type: 'mouse_up',
+          x: this.lastX,
+          y: this.lastY,
+          button: this.activeButton
+        });
+      }
+    });
 
     // Keyboard Events
     window.addEventListener('keydown', (e) => {
       if (!this.enabled) return;
+
+      // Hotkey Ctrl+Alt+K toggles Session Controls modal locally - do not forward to host
+      if ((e.ctrlKey || e.metaKey) && e.altKey && (e.code === 'KeyK' || e.key.toLowerCase() === 'k')) {
+        return;
+      }
+
       // Do not capture if modal is open or typing in an input field
       const dockOverlay = document.getElementById('main-dock-overlay');
       if (dockOverlay && !dockOverlay.classList.contains('hidden')) {
@@ -215,6 +231,12 @@ export class SmartInputHandler {
 
     window.addEventListener('keyup', (e) => {
       if (!this.enabled) return;
+
+      // Hotkey Ctrl+Alt+K toggles Session Controls modal locally - do not forward to host
+      if ((e.ctrlKey || e.metaKey) && e.altKey && (e.code === 'KeyK' || e.key.toLowerCase() === 'k')) {
+        return;
+      }
+
       const dockOverlay = document.getElementById('main-dock-overlay');
       if (dockOverlay && !dockOverlay.classList.contains('hidden')) {
         return;

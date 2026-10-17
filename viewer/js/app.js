@@ -125,28 +125,45 @@ class RogpViewerApp {
     }
 
     // Main Dock Modal Overlay Controls
-    const dockTriggerBtn = document.getElementById('main-dock-trigger');
     const dockOverlay = document.getElementById('main-dock-overlay');
     const closeDockBtn = document.getElementById('close-dock-btn');
+    const mouseCatcher = document.getElementById('mouse-catcher');
 
     const openDock = () => {
       if (dockOverlay) dockOverlay.classList.remove('hidden');
+      if (mouseCatcher) mouseCatcher.classList.add('disabled');
+      if (this.inputHandler) this.inputHandler.updateSyntheticCursor(0, 0, false);
     };
 
     const closeDock = () => {
       if (dockOverlay) dockOverlay.classList.add('hidden');
+      if (mouseCatcher) mouseCatcher.classList.remove('disabled');
     };
 
-    if (dockTriggerBtn) {
-      dockTriggerBtn.addEventListener('click', (e) => {
+    const toggleDock = () => {
+      if (!dockOverlay) return;
+      if (dockOverlay.classList.contains('hidden')) {
+        openDock();
+      } else {
+        closeDock();
+      }
+    };
+
+    // Global Hotkey Ctrl + Alt + K to toggle controls modal
+    window.addEventListener('keydown', (e) => {
+      const isCtrlAltK = (e.ctrlKey || e.metaKey) && e.altKey && (e.code === 'KeyK' || e.key.toLowerCase() === 'k');
+      if (isCtrlAltK) {
+        e.preventDefault();
         e.stopPropagation();
-        if (dockOverlay && dockOverlay.classList.contains('hidden')) {
-          openDock();
-        } else {
-          closeDock();
-        }
-      });
-    }
+        toggleDock();
+        return;
+      }
+
+      if (e.key === 'Escape' && dockOverlay && !dockOverlay.classList.contains('hidden')) {
+        e.preventDefault();
+        closeDock();
+      }
+    });
 
     if (closeDockBtn) {
       closeDockBtn.addEventListener('click', () => closeDock());
@@ -159,12 +176,6 @@ class RogpViewerApp {
         }
       });
     }
-
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && dockOverlay && !dockOverlay.classList.contains('hidden')) {
-        closeDock();
-      }
-    });
 
     // Telemetry Modal HUD & Opacity Slider Controls
     const telemetryModal = document.getElementById('telemetry-modal');
