@@ -68,9 +68,14 @@ export class SmartInputHandler {
   }
 
   initEvents() {
+    const stage = document.getElementById('main-stage') || this.viewport;
+
     // Mouse Move (Drag vs Hover)
-    this.viewport.addEventListener('mousemove', (e) => {
+    const handleMove = (e) => {
       if (!this.enabled) return;
+      const dockOverlay = document.getElementById('main-dock-overlay');
+      if (dockOverlay && !dockOverlay.classList.contains('hidden')) return;
+
       const { x, y, clientX, clientY } = this.mapCoordinates(e);
       this.lastX = x;
       this.lastY = y;
@@ -103,18 +108,17 @@ export class SmartInputHandler {
           });
         }, this.hoverThresholdMs);
       }
-    });
-
-    this.viewport.addEventListener('mouseleave', () => {
-      this.updateSyntheticCursor(0, 0, false);
-      if (this.hoverDebounceTimer) {
-        clearTimeout(this.hoverDebounceTimer);
-      }
-    });
+    };
 
     // Mouse Down (Immediate)
-    this.viewport.addEventListener('mousedown', (e) => {
+    const handleDown = (e) => {
       if (!this.enabled) return;
+      const dockOverlay = document.getElementById('main-dock-overlay');
+      if (dockOverlay && !dockOverlay.classList.contains('hidden')) return;
+
+      // Ignore if clicking on trigger button or telemetry modal
+      if (e.target.closest('#main-dock-trigger') || e.target.closest('#telemetry-modal')) return;
+
       e.preventDefault();
       this.isMouseDown = true;
       this.activeButton = e.button; // 0: left, 1: middle, 2: right
@@ -127,10 +131,10 @@ export class SmartInputHandler {
         y,
         button: e.button
       });
-    });
+    };
 
     // Mouse Up (Immediate)
-    window.addEventListener('mouseup', (e) => {
+    const handleUp = (e) => {
       if (!this.isMouseDown || !this.enabled) return;
       this.isMouseDown = false;
       const { x, y } = this.mapCoordinates(e);
@@ -142,16 +146,15 @@ export class SmartInputHandler {
         y,
         button: e.button
       });
-    });
-
-    // Prevent context menu to allow right click
-    this.viewport.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-    });
+    };
 
     // Wheel / Scroll (Immediate)
-    this.viewport.addEventListener('wheel', (e) => {
+    const handleWheel = (e) => {
       if (!this.enabled) return;
+      const dockOverlay = document.getElementById('main-dock-overlay');
+      if (dockOverlay && !dockOverlay.classList.contains('hidden')) return;
+      if (e.target.closest('#main-dock-trigger') || e.target.closest('#telemetry-modal')) return;
+
       e.preventDefault();
       const { x, y } = this.mapCoordinates(e);
 
@@ -163,7 +166,28 @@ export class SmartInputHandler {
         deltaX: Math.sign(e.deltaX),
         deltaY: Math.sign(e.deltaY)
       });
-    }, { passive: false });
+    };
+
+    this.viewport.addEventListener('mousemove', handleMove);
+    this.viewport.addEventListener('mousedown', handleDown);
+    this.viewport.addEventListener('wheel', handleWheel, { passive: false });
+    this.viewport.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    if (stage && stage !== this.viewport) {
+      stage.addEventListener('mousemove', handleMove);
+      stage.addEventListener('mousedown', handleDown);
+      stage.addEventListener('wheel', handleWheel, { passive: false });
+      stage.addEventListener('contextmenu', (e) => e.preventDefault());
+    }
+
+    this.viewport.addEventListener('mouseleave', () => {
+      this.updateSyntheticCursor(0, 0, false);
+      if (this.hoverDebounceTimer) {
+        clearTimeout(this.hoverDebounceTimer);
+      }
+    });
+
+    window.addEventListener('mouseup', handleUp);
 
     // Keyboard Events
     window.addEventListener('keydown', (e) => {

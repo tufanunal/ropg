@@ -8,6 +8,14 @@
 </head>
 <body>
 
+  <!-- Interactive Screen Stage -->
+  <main class="main-stage" id="main-stage">
+    <div class="viewport-wrapper" id="viewport">
+      <canvas id="screen-canvas" class="screen-layer" width="1920" height="1080"></canvas>
+      <canvas id="overlay-canvas" class="screen-layer" width="1920" height="1080"></canvas>
+    </div>
+  </main>
+
   <!-- Top Center Trigger Button for Main Dock -->
   <button id="main-dock-trigger" class="dock-trigger-btn" aria-label="Toggle Controls" title="Open Controls (or press ESC)">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -142,14 +150,6 @@
       </div>
     </div>
   </div>
-
-  <!-- Interactive Screen Stage -->
-  <main class="main-stage">
-    <div class="viewport-wrapper" id="viewport">
-      <canvas id="screen-canvas" class="screen-layer" width="1920" height="1080"></canvas>
-      <canvas id="overlay-canvas" class="screen-layer" width="1920" height="1080"></canvas>
-    </div>
-  </main>
 
   <!-- Synthetic Cursor (Local Rendering to exclude from screen capture) -->
   <div id="synthetic-cursor" class="synthetic-cursor">
