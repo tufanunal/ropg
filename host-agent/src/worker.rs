@@ -28,7 +28,22 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
         let mut cached_url = { state.settings.lock().unwrap().relay_url.clone() };
         let mut cached_id = { state.settings.lock().unwrap().host_id.clone() };
 
+        let mut cached_token = { state.settings.lock().unwrap().token.clone() };
+
         loop {
+            // 0. Update RelayClient immediately if connection parameters were changed in GUI
+            {
+                let s = state.settings.lock().unwrap();
+                if s.relay_url != cached_url || s.host_id != cached_id || s.token != cached_token {
+                    println!("[Worker] Connection target changed: URL={}, HostID={}", s.relay_url, s.host_id);
+                    current_client = RelayClient::new(s.relay_url.clone(), s.host_id.clone(), s.token.clone());
+                    cached_url = s.relay_url.clone();
+                    cached_id = s.host_id.clone();
+                    cached_token = s.token.clone();
+                    state.force_full_sync.store(true, Ordering::Relaxed);
+                }
+            }
+
             // Check if user paused sharing via UI
             if !state.is_running.load(Ordering::Relaxed) {
                 {
@@ -115,25 +130,16 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
                 Err(_) => {}
             }
 
-            // 2. Read dynamic settings after config application
-            let (relay_url, host_id, is_binary_mode, quality, grayscale, interval_ms) = {
+            // 2. Read dynamic streaming settings after config application
+            let (is_binary_mode, quality, grayscale, interval_ms) = {
                 let s = state.settings.lock().unwrap();
                 (
-                    s.relay_url.clone(),
-                    s.host_id.clone(),
                     s.is_binary_mode,
                     s.quality,
                     s.grayscale,
                     s.interval_ms,
                 )
             };
-
-            // Recreate client if URL or ID was updated in GUI
-            if relay_url != cached_url || host_id != cached_id {
-                current_client = RelayClient::new(relay_url.clone(), host_id.clone(), String::new());
-                cached_url = relay_url;
-                cached_id = host_id;
-            }
 
             let loop_start = Instant::now();
             let force_full = state.force_full_sync.swap(false, Ordering::Relaxed);
