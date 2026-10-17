@@ -43,7 +43,7 @@ function getOrCreateHost(hostId) {
     hosts.set(hostId, {
       lastSeen: Date.now(),
       fullSyncRequested: true, // request full sync on fresh connection
-      remoteConfig: null, // Viewer requested config for Host
+      clientConfig: null, // Viewer requested config for Host
       isBroadcasting: true,
       latestScreen: null,
       screenQueue: [],
@@ -293,7 +293,7 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    // 4. Host polls for pending Input commands & Remote Config (GET /api/host/:hostId/input)
+    // 4. Host polls for pending Input commands & Config (GET /api/host/:hostId/input)
     const hostInputMatch = pathname.match(/^\/api\/host\/([a-zA-Z0-9_-]+)\/input$/);
     if (req.method === 'GET' && hostInputMatch) {
       const hostId = hostInputMatch[1];
@@ -304,20 +304,20 @@ const server = http.createServer(async (req, res) => {
       const fullSync = host.fullSyncRequested;
       host.fullSyncRequested = false;
 
-      // Drain pending remote configuration if any
-      const remoteConfig = host.remoteConfig;
-      host.remoteConfig = null;
+      // Drain pending configuration if any
+      const clientConfig = host.clientConfig;
+      host.clientConfig = null;
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({
         fullSyncRequested: fullSync,
-        config: remoteConfig,
+        config: clientConfig,
         inputs: pendingInputs.map(item => item.data)
       }));
       return;
     }
 
-    // 5. Viewer sends Remote Configuration to Host (POST /api/viewer/:hostId/config)
+    // 5. Viewer sends Configuration to Host (POST /api/viewer/:hostId/config)
     const viewerConfigMatch = pathname.match(/^\/api\/viewer\/([a-zA-Z0-9_-]+)\/config$/);
     if (req.method === 'POST' && viewerConfigMatch) {
       const hostId = viewerConfigMatch[1];
@@ -326,14 +326,14 @@ const server = http.createServer(async (req, res) => {
 
       try {
         const cfg = JSON.parse(rawBody.toString('utf-8'));
-        host.remoteConfig = cfg;
+        host.clientConfig = cfg;
         if (typeof cfg.is_running === 'boolean') {
           host.isBroadcasting = cfg.is_running;
         }
         // Trigger full sync on mode or quality change
         host.fullSyncRequested = true;
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ status: 'ok', config: host.remoteConfig }));
+        res.end(JSON.stringify({ status: 'ok', config: host.clientConfig }));
       } catch (err) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Malformed config JSON' }));

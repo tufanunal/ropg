@@ -1,12 +1,12 @@
 {
   "name": "rogp-relay",
   "version": "1.0.0",
-  "description": "Rogp Remote Desktop Relay Server (HTTP GET/POST buffer with TTL)",
+  "description": "Rogp Relay Server (HTTP GET/POST buffer with TTL)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
-  "keywords": ["rogp", "remote-desktop", "vnc", "http-polling"],
+  "keywords": ["rogp", "http-polling", "grid-diff"],
   "author": "",
   "license": "MIT"
 }

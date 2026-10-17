@@ -1,7 +1,7 @@
 # Project Master Document & Strict Guidelines
 
 ## Overview
-This project is an HTTP-based, polling-driven Remote Desktop / VNC alternative. It strictly avoids video streaming protocols, WebSockets, and WebRTC. Instead, it relies on grid-based screen diffing, transmitting only changed screen regions as WebP images via standard HTTP GET/POST requests.
+This project is an HTTP-based, polling-driven screen streaming system. It strictly avoids video streaming protocols, WebSockets, and WebRTC. Instead, it relies on grid-based screen diffing, transmitting only changed screen regions as WebP images via standard HTTP GET/POST requests.
 
 ## Topology
 - **(A) Relay Server (Homelab):** A Debian-based central server exposed via Cloudflare Tunnel at `app.dernekportal.com`. It acts as the HTTP intermediary.

@@ -74,7 +74,7 @@ impl ScreenCapture {
             }
         }
 
-        // Fallback to simulated desktop
+        // Fallback to simulated display
         self.generate_synthetic_frame()
     }
 

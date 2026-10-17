@@ -15,7 +15,7 @@ use ui::RogpHostApp;
 
 #[derive(Parser, Debug)]
 #[command(name = "Rogp Host Agent")]
-#[command(about = "HTTP-based Remote Desktop Host Agent with Grid Diffing and WebP encoding for Debian 12")]
+#[command(about = "HTTP-based Host Agent with Grid Diffing and WebP encoding for Debian 12")]
 struct Args {
     #[arg(long, default_value = "http://127.0.0.1:8080")]
     relay_url: String,
@@ -76,7 +76,7 @@ fn main() -> eframe::Result {
         }
     }
 
-    // Launch Native Linux (Debian 12) Desktop GUI
+    // Launch Native Linux (Debian 12) GUI
     let native_options = eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder::default()
             .with_title("Rogp Host Agent - Debian 12")

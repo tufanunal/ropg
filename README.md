@@ -1,6 +1,6 @@
-# Rogp (Remote Desktop)
+# Rogp
 
-An HTTP-based, polling-driven Remote Desktop / VNC alternative built strictly adhering to the KISS principle. It completely eliminates WebSockets, WebRTC, and video codecs in favor of a 48x27 grid diffing architecture transmitting only modified cells as WebP images.
+An HTTP-based, polling-driven screen streaming engine built strictly adhering to the KISS principle. It completely eliminates WebSockets, WebRTC, and video codecs in favor of a 48x27 grid diffing architecture transmitting only modified cells as WebP images.
 
 ---
 
@@ -62,7 +62,7 @@ The server will listen on `http://0.0.0.0:8080` and serve the Viewer web app.
 
 ### 2. Run the Rust Host Agent (Native Debian 12 GUI)
 
-By default, running the Host Agent will launch the native desktop GUI window:
+By default, running the Host Agent will launch the native GUI window:
 ```bash
 cd host-agent
 cargo run
@@ -78,9 +78,9 @@ cargo run -- --relay-url http://127.0.0.1:8080 --host-id host-1 --mode binary
 - **Connection Controls**: Update Host ID, Relay Server URL, and Auth Token on the fly.
 - **Payload Mode Selection**: Switch between Mode B (Binary) and Mode A (JSON + Base64).
 - **Quality & Grayscale Sliders**: Dynamically tweak WebP compression quality and grayscale mode for maximum bandwidth savings.
-- **Security Control**: Enable or disable remote mouse & keyboard control with a single toggle.
+- **Input Control**: Enable or disable mouse & keyboard control with a single toggle.
 - **Force Full Sync**: Re-transmit all 1,296 cells immediately.
-- **Live Telemetry Card**: Real-time upload bandwidth (KB/s), dirty cell rate (cells/s), total transferred MB, and last received remote input event.
+- **Live Telemetry Card**: Real-time upload bandwidth (KB/s), dirty cell rate (cells/s), total transferred MB, and last received input event.
 
 #### Headless Mode (CLI / Service)
 If you want to run the Host Agent without a GUI (e.g. via `systemd` or SSH):

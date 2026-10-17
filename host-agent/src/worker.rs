@@ -53,16 +53,16 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
                     m.dirty_cells_per_sec = 0;
                 }
 
-                // While paused, still poll Relay for Resume command & remote config
-                if let Ok((sync_requested, remote_config, _inputs)) = current_client.poll_inputs() {
+                // While paused, still poll Relay for Resume command & config
+                if let Ok((sync_requested, viewer_config, _inputs)) = current_client.poll_inputs() {
                     if sync_requested {
                         state.force_full_sync.store(true, Ordering::Relaxed);
                     }
-                    if let Some(cfg) = remote_config {
+                    if let Some(cfg) = viewer_config {
                         let mut s = state.settings.lock().unwrap();
                         if let Some(running) = cfg.is_running {
                             state.is_running.store(running, Ordering::Relaxed);
-                            println!("[RemoteConfig] Viewer toggled broadcasting: {}", if running { "RESUMED" } else { "PAUSED" });
+                            println!("[Config] Viewer toggled broadcasting: {}", if running { "RESUMED" } else { "PAUSED" });
                         }
                         if let Some(mode) = cfg.mode {
                             s.is_binary_mode = mode.to_lowercase() == "binary";
@@ -80,32 +80,32 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
                 continue;
             }
 
-            // 1. Poll pending input commands & remote config from Viewer first
+            // 1. Poll pending input commands & config from Viewer first
             match current_client.poll_inputs() {
-                Ok((sync_requested, remote_config, inputs)) => {
+                Ok((sync_requested, viewer_config, inputs)) => {
                     if sync_requested {
                         state.force_full_sync.store(true, Ordering::Relaxed);
                     }
 
-                    // Apply remote configuration from Viewer if received
-                    if let Some(cfg) = remote_config {
+                    // Apply configuration from Viewer if received
+                    if let Some(cfg) = viewer_config {
                         let mut s = state.settings.lock().unwrap();
                         if let Some(running) = cfg.is_running {
                             state.is_running.store(running, Ordering::Relaxed);
-                            println!("[RemoteConfig] Viewer toggled broadcasting: {}", if running { "RESUMED" } else { "PAUSED" });
+                            println!("[Config] Viewer toggled broadcasting: {}", if running { "RESUMED" } else { "PAUSED" });
                         }
                         if let Some(mode) = cfg.mode {
                             let new_bin = mode.to_lowercase() == "binary";
                             s.is_binary_mode = new_bin;
-                            println!("[RemoteConfig] Viewer switched transport mode to: {}", if new_bin { "Mode B (Binary)" } else { "Mode A (JSON)" });
+                            println!("[Config] Viewer switched transport mode to: {}", if new_bin { "Mode B (Binary)" } else { "Mode A (JSON)" });
                         }
                         if let Some(q) = cfg.quality {
                             s.quality = q;
-                            println!("[RemoteConfig] Viewer updated WebP quality to: {}%", q);
+                            println!("[Config] Viewer updated WebP quality to: {}%", q);
                         }
                         if let Some(g) = cfg.grayscale {
                             s.grayscale = g;
-                            println!("[RemoteConfig] Viewer set grayscale to: {}", g);
+                            println!("[Config] Viewer set grayscale to: {}", g);
                         }
                         if let Some(interval) = cfg.interval_ms {
                             s.interval_ms = interval;
@@ -114,7 +114,7 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
                     }
 
                     if !inputs.is_empty() {
-                        let allow_in = { state.settings.lock().unwrap().allow_remote_input };
+                        let allow_in = { state.settings.lock().unwrap().allow_input };
                         let mut m = state.metrics.lock().unwrap();
                         let last_cmd = inputs.last().unwrap();
                         m.last_input_event = format!("{} (seq: {:?})", last_cmd.event_type, last_cmd.seq_id);

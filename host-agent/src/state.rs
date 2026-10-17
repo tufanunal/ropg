@@ -12,7 +12,7 @@ pub struct HostSettings {
     pub quality: u8,
     pub grayscale: bool,
     pub interval_ms: u64,
-    pub allow_remote_input: bool,
+    pub allow_input: bool,
 }
 
 impl HostSettings {
@@ -69,7 +69,7 @@ impl HostSharedState {
             quality,
             grayscale,
             interval_ms,
-            allow_remote_input: true,
+            allow_input: true,
         };
         let active = HostSettings::load_or_default(initial);
 

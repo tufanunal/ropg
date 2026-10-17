@@ -92,7 +92,7 @@ async function runTest() {
   assert.strictEqual(jsonScreenData.cells[0].v, 99);
   console.log('JSON Mode A ingestion and viewer retrieval verified successfully.');
 
-  console.log('--- [5/6] Verifying Remote Config Switch (Viewer -> Host) ---');
+  console.log('--- [5/6] Verifying Config Switch (Viewer -> Host) ---');
   // Viewer commands Host to switch from Binary to Mode A (JSON)
   console.log('Viewer sending config: switch to Mode A (JSON)...');
   const cfgRes = await fetch(`${RELAY_URL}/api/viewer/${HOST_ID}/config`, {
@@ -110,7 +110,7 @@ async function runTest() {
   assert.strictEqual(switchedScreenRes.headers.get('x-payload-mode'), 'json');
   console.log('Verified Host adopted Mode A (JSON) commanded by Viewer!');
 
-  console.log('--- [5b/8] Verifying Remote Broadcast Pause & Resume ---');
+  console.log('--- [5b/8] Verifying Broadcast Pause & Resume ---');
   // Viewer commands Host to pause broadcasting
   console.log('Viewer commanding Host to PAUSE broadcasting...');
   await fetch(`${RELAY_URL}/api/viewer/${HOST_ID}/config`, {

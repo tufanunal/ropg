@@ -1,4 +1,4 @@
-/* Modern Dark Mode Design System for Rogp Remote Desktop */
+/* Modern Dark Mode Design System for Rogp */
 :root {
   --bg-main: #090d16;
   --bg-card: rgba(15, 23, 42, 0.75);
@@ -285,15 +285,4 @@ canvas.screen-layer {
   fill: #f8fafc;
   stroke: #090d16;
   stroke-width: 1.5;
-}
-
-/* Footer Info */
-.footer-info {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 24px;
-  font-size: 11px;
-  color: var(--text-muted);
-  border-top: 1px solid var(--border-color);
-  background: var(--bg-card);
 }

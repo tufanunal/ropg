@@ -312,7 +312,7 @@ class RogpViewerApp {
   }
 
   /**
-   * Send remote configuration update to Host (Mode A/B, quality, grayscale)
+   * Send configuration update to Host (Mode A/B, quality, grayscale)
    */
   async sendConfig(config) {
     try {

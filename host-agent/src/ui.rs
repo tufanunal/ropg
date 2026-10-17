@@ -201,7 +201,7 @@ impl eframe::App for RogpHostApp {
                 });
 
                 ui.horizontal(|ui| {
-                    ui.checkbox(&mut s.allow_remote_input, "Allow Remote Mouse & Keyboard Control");
+                    ui.checkbox(&mut s.allow_input, "Allow Mouse & Keyboard Control");
                 });
 
                 ui.add_space(6.0);
@@ -213,7 +213,7 @@ impl eframe::App for RogpHostApp {
         ui.separator();
         ui.with_layout(egui::Layout::bottom_up(egui::Align::Center), |ui| {
             ui.label(
-                egui::RichText::new("Rogp • HTTP Polling Remote Desktop • Strictly No WebSockets")
+                egui::RichText::new("Rogp • HTTP Polling Engine • Strictly No WebSockets")
                     .size(10.0)
                     .color(egui::Color32::DARK_GRAY),
             );

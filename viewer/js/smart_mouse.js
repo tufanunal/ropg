@@ -144,7 +144,7 @@ export class SmartInputHandler {
       });
     });
 
-    // Prevent context menu to allow remote right click
+    // Prevent context menu to allow right click
     this.viewport.addEventListener('contextmenu', (e) => {
       e.preventDefault();
     });

@@ -13,7 +13,7 @@ pub struct HostScreenResponse {
 }
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct RemoteConfig {
+pub struct HostConfig {
     pub mode: Option<String>,
     pub quality: Option<u8>,
     pub grayscale: Option<bool>,
@@ -25,7 +25,7 @@ pub struct RemoteConfig {
 pub struct HostInputResponse {
     #[serde(rename = "fullSyncRequested")]
     pub full_sync_requested: Option<bool>,
-    pub config: Option<RemoteConfig>,
+    pub config: Option<HostConfig>,
     pub inputs: Option<Vec<InputCommand>>,
 }
 
@@ -83,7 +83,7 @@ impl RelayClient {
     }
 
     /// GET /api/host/:host_id/input
-    pub fn poll_inputs(&self) -> Result<(bool, Option<RemoteConfig>, Vec<InputCommand>), String> {
+    pub fn poll_inputs(&self) -> Result<(bool, Option<HostConfig>, Vec<InputCommand>), String> {
         let url = format!("{}/api/host/{}/input", self.relay_url, self.host_id);
 
         let mut headers = HeaderMap::new();
