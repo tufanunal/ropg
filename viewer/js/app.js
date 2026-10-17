@@ -123,6 +123,90 @@ class RogpViewerApp {
         await this.sendConfig({ grayscale: this.isGrayscale });
       });
     }
+
+    // Main Dock Modal Overlay Controls
+    const dockTriggerBtn = document.getElementById('main-dock-trigger');
+    const dockOverlay = document.getElementById('main-dock-overlay');
+    const closeDockBtn = document.getElementById('close-dock-btn');
+
+    const openDock = () => {
+      if (dockOverlay) dockOverlay.classList.remove('hidden');
+    };
+
+    const closeDock = () => {
+      if (dockOverlay) dockOverlay.classList.add('hidden');
+    };
+
+    if (dockTriggerBtn) {
+      dockTriggerBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (dockOverlay && dockOverlay.classList.contains('hidden')) {
+          openDock();
+        } else {
+          closeDock();
+        }
+      });
+    }
+
+    if (closeDockBtn) {
+      closeDockBtn.addEventListener('click', () => closeDock());
+    }
+
+    if (dockOverlay) {
+      dockOverlay.addEventListener('click', (e) => {
+        if (e.target === dockOverlay) {
+          closeDock();
+        }
+      });
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && dockOverlay && !dockOverlay.classList.contains('hidden')) {
+        closeDock();
+      }
+    });
+
+    // Telemetry Modal HUD & Opacity Slider Controls
+    const telemetryModal = document.getElementById('telemetry-modal');
+    const closeTelemetryBtn = document.getElementById('close-telemetry-btn');
+    const toggleTelemetryCheckbox = document.getElementById('toggle-telemetry-checkbox');
+    const telemetrySlider = document.getElementById('telemetry-opacity-slider');
+    const telemetryOpacityVal = document.getElementById('telemetry-opacity-val');
+
+    // Restore saved opacity preference
+    const savedOpacity = localStorage.getItem('rogp_telemetry_opacity') || '85';
+    if (telemetrySlider) {
+      telemetrySlider.value = savedOpacity;
+    }
+    if (telemetryOpacityVal) {
+      telemetryOpacityVal.textContent = `${savedOpacity}%`;
+    }
+    document.documentElement.style.setProperty('--telemetry-opacity', (parseInt(savedOpacity, 10) / 100).toString());
+
+    if (telemetrySlider) {
+      telemetrySlider.addEventListener('input', (e) => {
+        const val = e.target.value;
+        if (telemetryOpacityVal) telemetryOpacityVal.textContent = `${val}%`;
+        const decimalVal = (parseInt(val, 10) / 100).toString();
+        document.documentElement.style.setProperty('--telemetry-opacity', decimalVal);
+        localStorage.setItem('rogp_telemetry_opacity', val);
+      });
+    }
+
+    if (toggleTelemetryCheckbox) {
+      toggleTelemetryCheckbox.addEventListener('change', (e) => {
+        if (telemetryModal) {
+          telemetryModal.classList.toggle('hidden', !e.target.checked);
+        }
+      });
+    }
+
+    if (closeTelemetryBtn) {
+      closeTelemetryBtn.addEventListener('click', () => {
+        if (telemetryModal) telemetryModal.classList.add('hidden');
+        if (toggleTelemetryCheckbox) toggleTelemetryCheckbox.checked = false;
+      });
+    }
   }
 
   updateBroadcastUi() {

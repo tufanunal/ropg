@@ -168,7 +168,11 @@ export class SmartInputHandler {
     // Keyboard Events
     window.addEventListener('keydown', (e) => {
       if (!this.enabled) return;
-      // Do not capture if user is typing in an input field (e.g. host id input)
+      // Do not capture if modal is open or typing in an input field
+      const dockOverlay = document.getElementById('main-dock-overlay');
+      if (dockOverlay && !dockOverlay.classList.contains('hidden')) {
+        return;
+      }
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
         return;
       }
@@ -187,6 +191,10 @@ export class SmartInputHandler {
 
     window.addEventListener('keyup', (e) => {
       if (!this.enabled) return;
+      const dockOverlay = document.getElementById('main-dock-overlay');
+      if (dockOverlay && !dockOverlay.classList.contains('hidden')) {
+        return;
+      }
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
         return;
       }
