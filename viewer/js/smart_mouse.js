@@ -68,16 +68,9 @@ export class SmartInputHandler {
   }
 
   initEvents() {
-    const catcher = document.getElementById('mouse-catcher');
-    const stage = document.getElementById('main-stage') || this.viewport;
-    const targets = [catcher, this.viewport, stage].filter(Boolean);
-
     // Mouse Move (Drag vs Hover)
-    const handleMove = (e) => {
+    this.viewport.addEventListener('mousemove', (e) => {
       if (!this.enabled) return;
-      const dockOverlay = document.getElementById('main-dock-overlay');
-      if (dockOverlay && !dockOverlay.classList.contains('hidden')) return;
-
       const { x, y, clientX, clientY } = this.mapCoordinates(e);
       this.lastX = x;
       this.lastY = y;
@@ -110,14 +103,18 @@ export class SmartInputHandler {
           });
         }, this.hoverThresholdMs);
       }
-    };
+    });
+
+    this.viewport.addEventListener('mouseleave', () => {
+      this.updateSyntheticCursor(0, 0, false);
+      if (this.hoverDebounceTimer) {
+        clearTimeout(this.hoverDebounceTimer);
+      }
+    });
 
     // Mouse Down (Immediate)
-    const handleDown = (e) => {
+    this.viewport.addEventListener('mousedown', (e) => {
       if (!this.enabled) return;
-      const dockOverlay = document.getElementById('main-dock-overlay');
-      if (dockOverlay && !dockOverlay.classList.contains('hidden')) return;
-
       e.preventDefault();
       this.isMouseDown = true;
       this.activeButton = e.button; // 0: left, 1: middle, 2: right
@@ -130,10 +127,10 @@ export class SmartInputHandler {
         y,
         button: e.button
       });
-    };
+    });
 
     // Mouse Up (Immediate)
-    const handleUp = (e) => {
+    window.addEventListener('mouseup', (e) => {
       if (!this.isMouseDown || !this.enabled) return;
       this.isMouseDown = false;
       const { x, y } = this.mapCoordinates(e);
@@ -145,14 +142,16 @@ export class SmartInputHandler {
         y,
         button: e.button
       });
-    };
+    });
+
+    // Prevent context menu to allow right click
+    this.viewport.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+    });
 
     // Wheel / Scroll (Immediate)
-    const handleWheel = (e) => {
+    this.viewport.addEventListener('wheel', (e) => {
       if (!this.enabled) return;
-      const dockOverlay = document.getElementById('main-dock-overlay');
-      if (dockOverlay && !dockOverlay.classList.contains('hidden')) return;
-
       e.preventDefault();
       const { x, y } = this.mapCoordinates(e);
 
@@ -164,55 +163,12 @@ export class SmartInputHandler {
         deltaX: Math.sign(e.deltaX),
         deltaY: Math.sign(e.deltaY)
       });
-    };
-
-    targets.forEach((el) => {
-      el.addEventListener('mousemove', handleMove);
-      el.addEventListener('mousedown', handleDown);
-      el.addEventListener('wheel', handleWheel, { passive: false });
-      el.addEventListener('contextmenu', (e) => e.preventDefault());
-    });
-
-    const handleMouseLeave = () => {
-      this.updateSyntheticCursor(0, 0, false);
-      if (this.hoverDebounceTimer) {
-        clearTimeout(this.hoverDebounceTimer);
-      }
-    };
-
-    if (catcher) catcher.addEventListener('mouseleave', handleMouseLeave);
-    this.viewport.addEventListener('mouseleave', handleMouseLeave);
-
-    window.addEventListener('mouseup', handleUp);
-
-    // Safeguard: Release mouse if window loses focus
-    window.addEventListener('blur', () => {
-      if (this.isMouseDown) {
-        this.isMouseDown = false;
-        this.sendInput({
-          seqId: this.nextSeqId(),
-          type: 'mouse_up',
-          x: this.lastX,
-          y: this.lastY,
-          button: this.activeButton
-        });
-      }
-    });
+    }, { passive: false });
 
     // Keyboard Events
     window.addEventListener('keydown', (e) => {
       if (!this.enabled) return;
-
-      // Hotkey Ctrl+Alt+K toggles Session Controls modal locally - do not forward to host
-      if ((e.ctrlKey || e.metaKey) && e.altKey && (e.code === 'KeyK' || e.key.toLowerCase() === 'k')) {
-        return;
-      }
-
-      // Do not capture if modal is open or typing in an input field
-      const dockOverlay = document.getElementById('main-dock-overlay');
-      if (dockOverlay && !dockOverlay.classList.contains('hidden')) {
-        return;
-      }
+      // Do not capture if user is typing in an input field (e.g. host id input)
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
         return;
       }
@@ -231,16 +187,6 @@ export class SmartInputHandler {
 
     window.addEventListener('keyup', (e) => {
       if (!this.enabled) return;
-
-      // Hotkey Ctrl+Alt+K toggles Session Controls modal locally - do not forward to host
-      if ((e.ctrlKey || e.metaKey) && e.altKey && (e.code === 'KeyK' || e.key.toLowerCase() === 'k')) {
-        return;
-      }
-
-      const dockOverlay = document.getElementById('main-dock-overlay');
-      if (dockOverlay && !dockOverlay.classList.contains('hidden')) {
-        return;
-      }
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
         return;
       }

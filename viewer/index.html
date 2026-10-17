@@ -8,142 +8,80 @@
 </head>
 <body>
 
+  <!-- Top Navigation & Session Controls -->
+  <header class="navbar">
+    <div class="brand">
+      <span class="logo-badge">ROGP</span>
+    </div>
+
+    <div class="controls-group">
+      <input type="text" id="host-id-input" class="input-field" value="host-1" placeholder="Host ID" title="Host Identifier">
+      
+      <select id="mode-select" class="input-field" title="Select Transport Payload Mode">
+        <option value="binary" selected>Mode B (Binary Packet)</option>
+        <option value="json">Mode A (JSON + Base64)</option>
+      </select>
+
+      <select id="quality-select" class="input-field" title="WebP Quality on Host">
+        <option value="80" selected>Quality: 80%</option>
+        <option value="95">Quality: 95%</option>
+        <option value="60">Quality: 60%</option>
+        <option value="40">Quality: 40%</option>
+      </select>
+
+      <button id="toggle-grayscale-btn" class="btn btn-secondary" title="Toggle Grayscale mode on Host">Grayscale</button>
+
+      <button id="toggle-broadcast-btn" class="btn btn-broadcast-on" title="Pause or Resume Host Screen Broadcasting">🟢 Broadcast: ON</button>
+      <button id="connect-btn" class="btn btn-danger" title="Pause or Resume Viewer Polling">Disconnect</button>
+      <button id="full-sync-btn" class="btn btn-primary" title="Force capture and sync of all 1,296 cells">Full Sync</button>
+      <button id="toggle-grid-btn" class="btn btn-secondary" title="Show/Hide 48x27 grid lines">Grid (48x27)</button>
+      <button id="toggle-flash-btn" class="btn btn-secondary" title="Flash updated cells for debugging">Debug Flash</button>
+    </div>
+  </header>
+
+  <!-- Real-time Telemetry HUD -->
+  <section class="telemetry-bar" id="telemetry-dashboard">
+    <div class="telemetry-metric">
+      <span class="metric-label">Host:</span>
+      <span class="badge status-broadcasting" id="stat-host-status">STREAMING</span>
+    </div>
+    <div class="telemetry-metric">
+      <span class="metric-label">Bandwidth:</span>
+      <span class="metric-value" id="stat-bandwidth">0.0 KB/s</span>
+    </div>
+    <div class="telemetry-metric">
+      <span class="metric-label">Rate:</span>
+      <span class="metric-value" id="stat-cells-sec">0 cells/s</span>
+    </div>
+    <div class="telemetry-metric">
+      <span class="metric-label">HTTP Polling:</span>
+      <span class="metric-value" id="stat-req-sec">0.0 req/s</span>
+    </div>
+    <div class="telemetry-metric">
+      <span class="metric-label">Latency:</span>
+      <span class="metric-value" id="stat-latency">0 ms</span>
+    </div>
+    <div class="telemetry-metric">
+      <span class="metric-label">Transport:</span>
+      <span class="badge mode-binary" id="stat-mode-badge">BINARY</span>
+    </div>
+    <div class="telemetry-metric">
+      <span class="metric-label">Total Transferred:</span>
+      <span class="metric-value" id="stat-total-bytes">0.00 MB</span>
+    </div>
+    <div class="telemetry-metric">
+      <span class="metric-label">Cells Updated:</span>
+      <span class="metric-value" id="stat-total-cells">0</span>
+    </div>
+  </section>
+
   <!-- Interactive Screen Stage -->
-  <main class="main-stage" id="main-stage">
+  <main class="main-stage">
     <div class="viewport-wrapper" id="viewport">
       <canvas id="screen-canvas" class="screen-layer" width="1920" height="1080"></canvas>
       <canvas id="overlay-canvas" class="screen-layer" width="1920" height="1080"></canvas>
     </div>
   </main>
-
-  <!-- Fullscreen Mouse Catcher Layer (Top Level Input Interceptor) -->
-  <div id="mouse-catcher" class="mouse-catcher"></div>
-
-  <!-- Top-Left Floating Telemetry Modal -->
-  <aside id="telemetry-modal" class="floating-telemetry-hud">
-    <div class="telemetry-header">
-      <div class="telemetry-header-title">
-        <span class="pulse-indicator"></span>
-        <span>Telemetry</span>
-      </div>
-      <button id="close-telemetry-btn" class="hud-close-btn" title="Hide Telemetry">✕</button>
-    </div>
-
-    <div class="telemetry-grid">
-      <div class="telemetry-item">
-        <span class="metric-label">Host:</span>
-        <span class="badge status-broadcasting" id="stat-host-status">STREAMING</span>
-      </div>
-      <div class="telemetry-item">
-        <span class="metric-label">Bandwidth:</span>
-        <span class="metric-value" id="stat-bandwidth">0.0 KB/s</span>
-      </div>
-      <div class="telemetry-item">
-        <span class="metric-label">Rate:</span>
-        <span class="metric-value" id="stat-cells-sec">0 cells/s</span>
-      </div>
-      <div class="telemetry-item">
-        <span class="metric-label">Polling:</span>
-        <span class="metric-value" id="stat-req-sec">0.0 req/s</span>
-      </div>
-      <div class="telemetry-item">
-        <span class="metric-label">Latency:</span>
-        <span class="metric-value" id="stat-latency">0 ms</span>
-      </div>
-      <div class="telemetry-item">
-        <span class="metric-label">Transport:</span>
-        <span class="badge mode-binary" id="stat-mode-badge">BINARY</span>
-      </div>
-      <div class="telemetry-item">
-        <span class="metric-label">Transferred:</span>
-        <span class="metric-value" id="stat-total-bytes">0.00 MB</span>
-      </div>
-      <div class="telemetry-item">
-        <span class="metric-label">Cells:</span>
-        <span class="metric-value" id="stat-total-cells">0</span>
-      </div>
-    </div>
-  </aside>
-
-  <!-- Main Dock Overlay Modal (triggered from top center) -->
-  <div id="main-dock-overlay" class="modal-overlay hidden">
-    <div class="modal-card" id="main-dock-card">
-      <div class="modal-header">
-        <div class="modal-title-wrap">
-          <span class="logo-badge">ROGP</span>
-          <h2>Session Controls <span class="hotkey-badge">Ctrl+Alt+K</span></h2>
-        </div>
-        <button id="close-dock-btn" class="modal-close-btn" title="Close (ESC)">✕</button>
-      </div>
-
-      <div class="modal-body">
-        <!-- Section: Connection -->
-        <div class="control-section">
-          <label class="section-title">Connection</label>
-          <div class="controls-row">
-            <div class="input-with-label">
-              <span class="field-label">Host ID</span>
-              <input type="text" id="host-id-input" class="input-field" value="host-1" placeholder="Host ID" title="Host Identifier">
-            </div>
-            <button id="connect-btn" class="btn btn-danger" title="Pause or Resume Viewer Polling">Disconnect</button>
-            <button id="full-sync-btn" class="btn btn-primary" title="Force capture and sync of all 1,296 cells">Full Sync</button>
-          </div>
-        </div>
-
-        <!-- Section: Streaming & Encoding -->
-        <div class="control-section">
-          <label class="section-title">Stream & Quality</label>
-          <div class="controls-row">
-            <div class="input-with-label">
-              <span class="field-label">Transport</span>
-              <select id="mode-select" class="input-field" title="Select Transport Payload Mode">
-                <option value="binary" selected>Mode B (Binary Packet)</option>
-                <option value="json">Mode A (JSON + Base64)</option>
-              </select>
-            </div>
-
-            <div class="input-with-label">
-              <span class="field-label">WebP Quality</span>
-              <select id="quality-select" class="input-field" title="WebP Quality on Host">
-                <option value="80" selected>80%</option>
-                <option value="95">95%</option>
-                <option value="60">60%</option>
-                <option value="40">40%</option>
-              </select>
-            </div>
-
-            <button id="toggle-grayscale-btn" class="btn btn-secondary" title="Toggle Grayscale mode on Host">Grayscale</button>
-            <button id="toggle-broadcast-btn" class="btn btn-broadcast-on" title="Pause or Resume Host Screen Broadcasting">🟢 Broadcast: ON</button>
-          </div>
-        </div>
-
-        <!-- Section: Display & Debug -->
-        <div class="control-section">
-          <label class="section-title">Display & Debug</label>
-          <div class="controls-row">
-            <button id="toggle-grid-btn" class="btn btn-secondary" title="Show/Hide 48x27 grid lines">Grid (48x27)</button>
-            <button id="toggle-flash-btn" class="btn btn-secondary" title="Flash updated cells for debugging">Debug Flash</button>
-          </div>
-        </div>
-
-        <!-- Section: Telemetry HUD Settings -->
-        <div class="control-section">
-          <label class="section-title">Telemetry HUD</label>
-          <div class="controls-row telemetry-controls-row">
-            <label class="checkbox-label">
-              <input type="checkbox" id="toggle-telemetry-checkbox" checked>
-              <span>Show HUD</span>
-            </label>
-
-            <div class="slider-group">
-              <span class="field-label">Opacity: <span id="telemetry-opacity-val">85%</span></span>
-              <input type="range" id="telemetry-opacity-slider" min="10" max="100" value="85" class="slider-input">
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- Synthetic Cursor (Local Rendering to exclude from screen capture) -->
   <div id="synthetic-cursor" class="synthetic-cursor">
