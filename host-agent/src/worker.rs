@@ -14,7 +14,8 @@ use crate::state::HostSharedState;
 pub fn start_worker_thread(state: Arc<HostSharedState>) {
     std::thread::spawn(move || {
         let mut capture = ScreenCapture::new();
-        let mut diff_tracker = GridDiffTracker::new();
+        let initial_cs = { state.settings.lock().unwrap().cell_size };
+        let mut diff_tracker = GridDiffTracker::new(initial_cs);
         let mut input_dispatcher = InputDispatcher::new();
 
         let mut last_metric_time = Instant::now();
@@ -103,6 +104,13 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
                             s.quality = q;
                             println!("[Config] Viewer updated WebP quality to: {}%", q);
                         }
+                        if let Some(cs) = cfg.cell_size {
+                            if (cs == 40 || cs == 60 || cs == 120) && s.cell_size != cs {
+                                s.cell_size = cs;
+                                println!("[Config] Viewer switched grid size to: {}px", cs);
+                                state.force_full_sync.store(true, Ordering::Relaxed);
+                            }
+                        }
                         if let Some(g) = cfg.grayscale {
                             s.grayscale = g;
                             println!("[Config] Viewer set grayscale to: {}", g);
@@ -131,15 +139,21 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
             }
 
             // 2. Read dynamic streaming settings after config application
-            let (is_binary_mode, quality, grayscale, interval_ms) = {
+            let (is_binary_mode, quality, grayscale, interval_ms, cell_size) = {
                 let s = state.settings.lock().unwrap();
                 (
                     s.is_binary_mode,
                     s.quality,
                     s.grayscale,
                     s.interval_ms,
+                    s.cell_size,
                 )
             };
+
+            // Sync diff tracker grid size if changed
+            if diff_tracker.config.cell_size != cell_size {
+                diff_tracker.set_cell_size(cell_size);
+            }
 
             let loop_start = Instant::now();
             let force_full = state.force_full_sync.swap(false, Ordering::Relaxed);
@@ -153,7 +167,7 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
 
             if !dirty_cells.is_empty() {
                 // 5. WebP encode
-                let encoder = CellEncoder::new(quality, grayscale);
+                let encoder = CellEncoder::new(quality, grayscale, cell_size, cell_size);
                 let mut encoded_cells = Vec::with_capacity(dirty_cells.len());
 
                 for dc in &dirty_cells {
@@ -180,7 +194,7 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
                 cells_since_metric += dirty_count;
 
                 // 7. Send to Relay
-                match current_client.send_screen(is_bin, &payload) {
+                match current_client.send_screen(is_bin, &payload, cell_size, quality) {
                     Ok(_) => {
                         let mut m = state.metrics.lock().unwrap();
                         m.is_connected = true;

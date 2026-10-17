@@ -3,6 +3,10 @@ use std::sync::{Arc, Mutex};
 use serde::{Deserialize, Serialize};
 use std::fs;
 
+fn default_cell_size() -> usize {
+    40
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct HostSettings {
     pub relay_url: String,
@@ -13,6 +17,8 @@ pub struct HostSettings {
     pub grayscale: bool,
     pub interval_ms: u64,
     pub allow_input: bool,
+    #[serde(default = "default_cell_size")]
+    pub cell_size: usize,
 }
 
 impl HostSettings {
@@ -70,6 +76,7 @@ impl HostSharedState {
             grayscale,
             interval_ms,
             allow_input: true,
+            cell_size: 40,
         };
         let active = HostSettings::load_or_default(initial);
 

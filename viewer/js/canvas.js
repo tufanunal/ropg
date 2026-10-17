@@ -1,9 +1,9 @@
 /**
  * Rogp Canvas Blit Engine
- * Manages the 1920x1080 HTML5 Canvas and blits 40x40 cell updates.
+ * Manages the 1920x1080 HTML5 Canvas and blits dynamic cell updates (40x40, 60x60, 120x120).
  */
 
-import { SCREEN_WIDTH, SCREEN_HEIGHT, CELL_WIDTH, CELL_HEIGHT, GRID_COLS, GRID_ROWS, ROW_LABELS } from './protocol.js';
+import { SCREEN_WIDTH, SCREEN_HEIGHT, ROW_LABELS } from './protocol.js';
 
 export class ScreenCanvas {
   constructor(canvasElement, overlayCanvasElement) {
@@ -19,6 +19,12 @@ export class ScreenCanvas {
       this.overlayCanvas.height = SCREEN_HEIGHT;
     }
 
+    this.cellSize = 40;
+    this.cellWidth = 40;
+    this.cellHeight = 40;
+    this.gridCols = 48;
+    this.gridRows = 27;
+
     // Cell version tracking: Map<cellId, versionNumber>
     this.cellVersions = new Map();
     this.totalCellsUpdated = 0;
@@ -27,6 +33,20 @@ export class ScreenCanvas {
 
     // Fill initial canvas with clean dark backdrop
     this.clear();
+  }
+
+  setGridSize(size) {
+    const s = parseInt(size, 10) || 40;
+    if (this.cellSize === s) return;
+    this.cellSize = s;
+    this.cellWidth = s;
+    this.cellHeight = s;
+    this.gridCols = Math.round(SCREEN_WIDTH / s);
+    this.gridRows = Math.round(SCREEN_HEIGHT / s);
+    this.cellVersions.clear();
+    if (this.showGrid) {
+      this.renderGridOverlay();
+    }
   }
 
   clear() {
@@ -68,20 +88,20 @@ export class ScreenCanvas {
   }
 
   async renderCell(cell) {
-    const x = cell.col * CELL_WIDTH;
-    const y = cell.row * CELL_HEIGHT;
+    const x = cell.col * this.cellWidth;
+    const y = cell.row * this.cellHeight;
 
     try {
       // Use createImageBitmap for fast off-thread decode
       const bitmap = await createImageBitmap(cell.blob);
-      this.ctx.drawImage(bitmap, x, y, CELL_WIDTH, CELL_HEIGHT);
+      this.ctx.drawImage(bitmap, x, y, this.cellWidth, this.cellHeight);
       bitmap.close();
 
       if (this.flashUpdatedCells && this.overlayCtx) {
         this.overlayCtx.fillStyle = 'rgba(56, 189, 248, 0.4)'; // Sky blue highlight
-        this.overlayCtx.fillRect(x, y, CELL_WIDTH, CELL_HEIGHT);
+        this.overlayCtx.fillRect(x, y, this.cellWidth, this.cellHeight);
         setTimeout(() => {
-          this.overlayCtx.clearRect(x, y, CELL_WIDTH, CELL_HEIGHT);
+          this.overlayCtx.clearRect(x, y, this.cellWidth, this.cellHeight);
         }, 120);
       }
     } catch (err) {
@@ -100,13 +120,14 @@ export class ScreenCanvas {
 
   renderGridOverlay() {
     if (!this.overlayCtx) return;
+    this.overlayCtx.clearRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     this.overlayCtx.save();
     this.overlayCtx.strokeStyle = 'rgba(148, 163, 184, 0.2)'; // Thin grid lines
     this.overlayCtx.lineWidth = 1;
 
     // Draw vertical lines
-    for (let c = 0; c <= GRID_COLS; c++) {
-      const x = c * CELL_WIDTH;
+    for (let c = 0; c <= this.gridCols; c++) {
+      const x = c * this.cellWidth;
       this.overlayCtx.beginPath();
       this.overlayCtx.moveTo(x, 0);
       this.overlayCtx.lineTo(x, SCREEN_HEIGHT);
@@ -114,8 +135,8 @@ export class ScreenCanvas {
     }
 
     // Draw horizontal lines
-    for (let r = 0; r <= GRID_ROWS; r++) {
-      const y = r * CELL_HEIGHT;
+    for (let r = 0; r <= this.gridRows; r++) {
+      const y = r * this.cellHeight;
       this.overlayCtx.beginPath();
       this.overlayCtx.moveTo(0, y);
       this.overlayCtx.lineTo(SCREEN_WIDTH, y);
@@ -125,10 +146,11 @@ export class ScreenCanvas {
     // Draw subtle row/column headers
     this.overlayCtx.fillStyle = 'rgba(255, 255, 255, 0.35)';
     this.overlayCtx.font = '10px monospace';
-    for (let r = 0; r < GRID_ROWS; r++) {
-      for (let c = 0; c < GRID_COLS; c += 4) {
-        const id = `${ROW_LABELS[r]}${String(c + 1).padStart(2, '0')}`;
-        this.overlayCtx.fillText(id, c * CELL_WIDTH + 4, r * CELL_HEIGHT + 14);
+    const step = this.gridCols <= 16 ? 1 : (this.gridCols <= 32 ? 2 : 4);
+    for (let r = 0; r < this.gridRows; r++) {
+      for (let c = 0; c < this.gridCols; c += step) {
+        const id = `${ROW_LABELS[r] || '?'}${String(c + 1).padStart(2, '0')}`;
+        this.overlayCtx.fillText(id, c * this.cellWidth + 4, r * this.cellHeight + 14);
       }
     }
 

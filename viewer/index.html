@@ -101,6 +101,15 @@
           <label class="section-title">Stream & Quality</label>
           <div class="controls-row">
             <div class="input-with-label">
+              <span class="field-label">Grid Size</span>
+              <select id="grid-size-select" class="input-field" title="Grid Size & Density">
+                <option value="40" selected>40x40 (48x27, 1296 cells)</option>
+                <option value="60">60x60 (32x18, 576 cells)</option>
+                <option value="120">120x120 (16x9, 144 cells)</option>
+              </select>
+            </div>
+
+            <div class="input-with-label">
               <span class="field-label">Transport</span>
               <select id="mode-select" class="input-field" title="Select Transport Payload Mode">
                 <option value="binary" selected>Mode B (Binary Packet)</option>
@@ -108,14 +117,9 @@
               </select>
             </div>
 
-            <div class="input-with-label">
-              <span class="field-label">WebP Quality</span>
-              <select id="quality-select" class="input-field" title="WebP Quality on Host">
-                <option value="80" selected>80%</option>
-                <option value="95">95%</option>
-                <option value="60">60%</option>
-                <option value="40">40%</option>
-              </select>
+            <div class="slider-group" style="min-width: 170px;">
+              <span class="field-label">WebP Quality: <span id="quality-val">80%</span></span>
+              <input type="range" id="quality-slider" min="10" max="100" value="80" class="slider-input">
             </div>
 
             <button id="toggle-grayscale-btn" class="btn btn-secondary" title="Toggle Grayscale mode on Host">Grayscale</button>
@@ -127,7 +131,7 @@
         <div class="control-section">
           <label class="section-title">Display & Debug</label>
           <div class="controls-row">
-            <button id="toggle-grid-btn" class="btn btn-secondary" title="Show/Hide 48x27 grid lines">Grid (48x27)</button>
+            <button id="toggle-grid-btn" class="btn btn-secondary" title="Show/Hide grid overlay lines">Grid Overlay</button>
             <button id="toggle-flash-btn" class="btn btn-secondary" title="Flash updated cells for debugging">Debug Flash</button>
           </div>
         </div>

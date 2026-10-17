@@ -108,12 +108,34 @@ class RogpViewerApp {
       });
     }
 
-    const qualitySelect = document.getElementById('quality-select');
-    if (qualitySelect) {
-      qualitySelect.addEventListener('change', async () => {
-        const quality = parseInt(qualitySelect.value, 10);
-        qualitySelect.blur();
+    const qualitySlider = document.getElementById('quality-slider');
+    const qualityVal = document.getElementById('quality-val');
+    this.lastQualityUserChangeTime = 0;
+
+    if (qualitySlider) {
+      qualitySlider.addEventListener('input', (e) => {
+        const val = e.target.value;
+        if (qualityVal) qualityVal.textContent = `${val}%`;
+      });
+
+      qualitySlider.addEventListener('change', async (e) => {
+        this.lastQualityUserChangeTime = Date.now();
+        const quality = parseInt(e.target.value, 10);
+        qualitySlider.blur();
         await this.sendConfig({ quality });
+      });
+    }
+
+    const gridSizeSelect = document.getElementById('grid-size-select');
+    this.lastGridUserChangeTime = 0;
+
+    if (gridSizeSelect) {
+      gridSizeSelect.addEventListener('change', async () => {
+        this.lastGridUserChangeTime = Date.now();
+        const cellSize = parseInt(gridSizeSelect.value, 10);
+        this.canvasEngine.setGridSize(cellSize);
+        gridSizeSelect.blur();
+        await this.sendConfig({ cell_size: cellSize });
       });
     }
 
@@ -355,6 +377,31 @@ class RogpViewerApp {
         const modeSelect = document.getElementById('mode-select');
         if (modeSelect && modeSelect.value !== modeHeader) {
           modeSelect.value = modeHeader;
+        }
+      }
+
+      // Synchronize Grid Size from Host (2-way sync)
+      const cellSizeHeader = res.headers.get('x-cell-size');
+      if (cellSizeHeader && (!this.lastGridUserChangeTime || Date.now() - this.lastGridUserChangeTime > 2500)) {
+        const cs = parseInt(cellSizeHeader, 10);
+        if (cs && cs !== this.canvasEngine.cellSize) {
+          this.canvasEngine.setGridSize(cs);
+          const gridSelect = document.getElementById('grid-size-select');
+          if (gridSelect && gridSelect.value !== String(cs)) {
+            gridSelect.value = String(cs);
+          }
+        }
+      }
+
+      // Synchronize WebP Quality Slider from Host (2-way sync)
+      const qualityHeader = res.headers.get('x-quality');
+      if (qualityHeader && (!this.lastQualityUserChangeTime || Date.now() - this.lastQualityUserChangeTime > 2500)) {
+        const q = parseInt(qualityHeader, 10);
+        const qualitySlider = document.getElementById('quality-slider');
+        const qualityVal = document.getElementById('quality-val');
+        if (qualitySlider && parseInt(qualitySlider.value, 10) !== q && document.activeElement !== qualitySlider) {
+          qualitySlider.value = String(q);
+          if (qualityVal) qualityVal.textContent = `${q}%`;
         }
       }
 

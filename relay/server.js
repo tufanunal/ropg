@@ -163,8 +163,8 @@ const server = http.createServer(async (req, res) => {
   // Common CORS and security headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Rogp-Token, X-Payload-Mode');
-  res.setHeader('Access-Control-Expose-Headers', 'X-Payload-Mode, X-Screen-Timestamp, X-Host-Broadcasting');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Rogp-Token, X-Payload-Mode, X-Cell-Size, X-Quality');
+  res.setHeader('Access-Control-Expose-Headers', 'X-Payload-Mode, X-Screen-Timestamp, X-Host-Broadcasting, X-Cell-Size, X-Quality');
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
@@ -184,6 +184,13 @@ const server = http.createServer(async (req, res) => {
       const rawBody = await readRequestBody(req);
       const contentType = req.headers['content-type'] || '';
       const isBinary = contentType.includes('application/octet-stream') || req.headers['x-payload-mode'] === 'binary';
+
+      if (req.headers['x-cell-size']) {
+        host.cellSize = parseInt(req.headers['x-cell-size'], 10);
+      }
+      if (req.headers['x-quality']) {
+        host.quality = parseInt(req.headers['x-quality'], 10);
+      }
 
       host.stats.bytesReceived += rawBody.length;
       host.stats.screenUpdatesTotal++;
@@ -233,7 +240,9 @@ const server = http.createServer(async (req, res) => {
 
       if (!screen) {
         res.writeHead(204, {
-          'X-Host-Broadcasting': host.isBroadcasting ? 'true' : 'false'
+          'X-Host-Broadcasting': host.isBroadcasting ? 'true' : 'false',
+          'X-Cell-Size': String(host.cellSize || 40),
+          'X-Quality': String(host.quality || 80)
         });
         res.end();
         return;
@@ -244,7 +253,9 @@ const server = http.createServer(async (req, res) => {
           'Content-Type': 'application/octet-stream',
           'X-Payload-Mode': 'binary',
           'X-Screen-Timestamp': String(screen.timestamp),
-          'X-Host-Broadcasting': host.isBroadcasting ? 'true' : 'false'
+          'X-Host-Broadcasting': host.isBroadcasting ? 'true' : 'false',
+          'X-Cell-Size': String(host.cellSize || 40),
+          'X-Quality': String(host.quality || 80)
         });
         res.end(screen.data);
       } else {
@@ -252,7 +263,9 @@ const server = http.createServer(async (req, res) => {
           'Content-Type': 'application/json',
           'X-Payload-Mode': 'json',
           'X-Screen-Timestamp': String(screen.timestamp),
-          'X-Host-Broadcasting': host.isBroadcasting ? 'true' : 'false'
+          'X-Host-Broadcasting': host.isBroadcasting ? 'true' : 'false',
+          'X-Cell-Size': String(host.cellSize || 40),
+          'X-Quality': String(host.quality || 80)
         });
         res.end(JSON.stringify(screen.data));
       }
@@ -331,7 +344,13 @@ const server = http.createServer(async (req, res) => {
         if (typeof cfg.is_running === 'boolean') {
           host.isBroadcasting = cfg.is_running;
         }
-        // Trigger full sync on mode or quality change
+        if (typeof cfg.quality === 'number') {
+          host.quality = cfg.quality;
+        }
+        if (typeof cfg.cell_size === 'number') {
+          host.cellSize = cfg.cell_size;
+        }
+        // Trigger full sync on mode, quality, or grid size change
         host.fullSyncRequested = true;
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ status: 'ok', config: host.clientConfig }));

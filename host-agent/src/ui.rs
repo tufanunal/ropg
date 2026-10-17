@@ -126,8 +126,10 @@ impl eframe::App for RogpHostApp {
                     ui.label(egui::RichText::new("Total Sent:").color(egui::Color32::GRAY));
                     ui.label(egui::RichText::new(format!("{:.2} MB", total_mb)).strong());
 
+                    let current_cs = { self.state.settings.lock().unwrap().cell_size };
+                    let grid_cfg = crate::grid::GridConfig::from_cell_size(current_cs);
                     ui.label(egui::RichText::new("Grid Slices:").color(egui::Color32::GRAY));
-                    ui.label(egui::RichText::new("48x27 (1,296)").strong());
+                    ui.label(egui::RichText::new(format!("{}x{} ({} cells)", grid_cfg.cols, grid_cfg.rows, grid_cfg.total_cells)).strong());
                     ui.end_row();
 
                     ui.label(egui::RichText::new("Last Input:").color(egui::Color32::GRAY));
@@ -181,6 +183,17 @@ impl eframe::App for RogpHostApp {
                 let mut s = self.state.settings.lock().unwrap();
 
                 ui.horizontal(|ui| {
+                    ui.label("Grid Resolution:");
+                    let prev_cs = s.cell_size;
+                    ui.radio_value(&mut s.cell_size, 40, "40px (48x27)");
+                    ui.radio_value(&mut s.cell_size, 60, "60px (32x18)");
+                    ui.radio_value(&mut s.cell_size, 120, "120px (16x9)");
+                    if s.cell_size != prev_cs {
+                        self.state.force_full_sync.store(true, Ordering::Relaxed);
+                    }
+                });
+
+                ui.horizontal(|ui| {
                     ui.label("Payload Mode:");
                     ui.radio_value(&mut s.is_binary_mode, true, "Mode B (Binary)");
                     ui.radio_value(&mut s.is_binary_mode, false, "Mode A (JSON + Base64)");
@@ -205,7 +218,8 @@ impl eframe::App for RogpHostApp {
                 });
 
                 ui.add_space(6.0);
-                if ui.button(egui::RichText::new("🔄 Force Full Screen Sync (All 1,296 Cells)").strong()).clicked() {
+                let total = crate::grid::GridConfig::from_cell_size(s.cell_size).total_cells;
+                if ui.button(egui::RichText::new(format!("🔄 Force Full Screen Sync (All {} Cells)", total)).strong()).clicked() {
                     self.state.force_full_sync.store(true, Ordering::Relaxed);
                 }
             });

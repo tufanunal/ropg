@@ -1,45 +1,41 @@
-use std::io::Cursor;
-use image::{ColorType, ImageEncoder};
-use image::codecs::webp::WebPEncoder;
-use crate::grid::{CELL_WIDTH, CELL_HEIGHT};
+use webp::Encoder;
 
 pub struct CellEncoder {
-    #[allow(dead_code)]
     pub quality: u8,
     pub grayscale: bool,
+    pub cell_width: usize,
+    pub cell_height: usize,
 }
 
 impl CellEncoder {
-    pub fn new(quality: u8, grayscale: bool) -> Self {
-        Self { quality, grayscale }
+    pub fn new(quality: u8, grayscale: bool, cell_width: usize, cell_height: usize) -> Self {
+        Self { quality, grayscale, cell_width, cell_height }
     }
 
-    /// Encodes a 40x40 pixel buffer into WebP bytes
+    /// Encodes a cell's pixel buffer into real lossy/quality WebP bytes
     pub fn encode_cell(&self, rgba: &[u8]) -> Result<Vec<u8>, String> {
-        let mut output = Vec::new();
+        let q = self.quality.clamp(1, 100) as f32;
 
-        if self.grayscale {
-            // Convert RGBA to 8-bit Grayscale: Y = 0.299R + 0.587G + 0.114B
-            let mut gray = Vec::with_capacity(CELL_WIDTH * CELL_HEIGHT);
+        let memory = if self.grayscale {
+            // Convert RGBA to 8-bit Grayscale replicated into RGB/RGBA
+            let mut gray_rgba = Vec::with_capacity(self.cell_width * self.cell_height * 4);
             for chunk in rgba.chunks_exact(4) {
                 let r = chunk[0] as f32;
                 let g = chunk[1] as f32;
                 let b = chunk[2] as f32;
                 let y = (0.299 * r + 0.587 * g + 0.114 * b) as u8;
-                gray.push(y);
+                gray_rgba.push(y);
+                gray_rgba.push(y);
+                gray_rgba.push(y);
+                gray_rgba.push(255);
             }
-
-            let mut cursor = Cursor::new(&mut output);
-            let encoder = WebPEncoder::new_lossless(&mut cursor);
-            encoder.write_image(&gray, CELL_WIDTH as u32, CELL_HEIGHT as u32, ColorType::L8.into())
-                .map_err(|e| format!("WebP grayscale encode error: {}", e))?;
+            let encoder = Encoder::from_rgba(&gray_rgba, self.cell_width as u32, self.cell_height as u32);
+            encoder.encode(q)
         } else {
-            let mut cursor = Cursor::new(&mut output);
-            let encoder = WebPEncoder::new_lossless(&mut cursor);
-            encoder.write_image(rgba, CELL_WIDTH as u32, CELL_HEIGHT as u32, ColorType::Rgba8.into())
-                .map_err(|e| format!("WebP RGBA encode error: {}", e))?;
-        }
+            let encoder = Encoder::from_rgba(rgba, self.cell_width as u32, self.cell_height as u32);
+            encoder.encode(q)
+        };
 
-        Ok(output)
+        Ok(memory.to_vec())
     }
 }
