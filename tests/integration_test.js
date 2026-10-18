@@ -33,7 +33,7 @@ async function runTest() {
   console.log('Relay stats:', stats);
 
   console.log('--- [3/6] Launching Rust Host Agent ---');
-  const agentBinary = path.resolve(__dirname, '../host-agent/target/debug/host-agent');
+  const agentBinary = path.resolve(__dirname, '../host-agent/target/release/host-agent');
   const agentProcess = spawn(agentBinary, [
     '--relay-url', RELAY_URL,
     '--host-id', HOST_ID,
@@ -45,21 +45,28 @@ async function runTest() {
   });
 
   agentProcess.stdout.on('data', data => {
-    // console.log('[HostAgent]:', data.toString());
+    console.log('[HostAgent]:', data.toString());
   });
   agentProcess.stderr.on('data', data => {
     console.error('[HostAgent ERR]:', data.toString());
   });
 
-  await sleep(2000);
-
   console.log('--- [4/6] Verifying Viewer Screen Fetch (Binary Mode B) ---');
-  const screenRes = await fetch(`${RELAY_URL}/api/viewer/${HOST_ID}/screen`);
+  let screenRes = null;
+  for (let i = 0; i < 20; i++) {
+    screenRes = await fetch(`${RELAY_URL}/api/viewer/${HOST_ID}/screen`);
+    if (screenRes.status === 200) break;
+    await sleep(250);
+  }
   console.log('Viewer Screen HTTP Status:', screenRes.status);
   console.log('Content-Type:', screenRes.headers.get('content-type'));
   console.log('X-Payload-Mode:', screenRes.headers.get('x-payload-mode'));
+  console.log('X-Compression-Method:', screenRes.headers.get('x-compression-method'));
+  console.log('X-Dynamic-Quality:', screenRes.headers.get('x-dynamic-quality'));
   assert.strictEqual(screenRes.status, 200);
   assert.strictEqual(screenRes.headers.get('x-payload-mode'), 'binary');
+  assert.strictEqual(screenRes.headers.get('x-compression-method'), '5');
+  assert.strictEqual(screenRes.headers.get('x-dynamic-quality'), 'true');
 
   const screenBytes = await screenRes.arrayBuffer();
   console.log('Received binary screen payload bytes:', screenBytes.byteLength);
@@ -112,6 +119,19 @@ async function runTest() {
   assert.strictEqual(switchedScreenRes.headers.get('x-payload-mode'), 'json');
   assert.strictEqual(switchedScreenRes.headers.get('x-grid-size'), '160x180');
   console.log('Verified Host adopted Mode A (JSON) and 160x180 Grid commanded by Viewer!');
+
+  // Viewer commands Host to switch compression method to 6 (High)
+  console.log('Viewer sending config: switch to High Compression (6)...');
+  await fetch(`${RELAY_URL}/api/viewer/${HOST_ID}/config`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ compression_method: 6 })
+  });
+  await sleep(1500);
+  const compScreenRes = await fetch(`${RELAY_URL}/api/viewer/${HOST_ID}/screen`);
+  console.log('Host responded with X-Compression-Method:', compScreenRes.headers.get('x-compression-method'));
+  assert.strictEqual(compScreenRes.headers.get('x-compression-method'), '6');
+  console.log('Verified Host adopted High Compression (6)!');
 
   console.log('--- [5b/8] Verifying Broadcast Pause & Resume ---');
   // Viewer commands Host to pause broadcasting

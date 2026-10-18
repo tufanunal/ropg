@@ -21,6 +21,8 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
         let mut last_metric_time = Instant::now();
         let mut bytes_since_metric = 0usize;
         let mut cells_since_metric = 0usize;
+        let mut consecutive_fast_frames = 0usize;
+        let mut fast_motion_active = false;
 
         let mut current_client = {
             let s = state.settings.lock().unwrap();
@@ -92,6 +94,16 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
                                 state.force_full_sync.store(true, Ordering::Relaxed);
                             }
                         }
+                        if let Some(comp) = cfg.compression_method {
+                            if (4..=6).contains(&comp) {
+                                s.compression_method = comp;
+                                println!("[Config] Viewer set compression method to: {}", comp);
+                            }
+                        }
+                        if let Some(dyn_q) = cfg.dynamic_quality {
+                            s.dynamic_quality = dyn_q;
+                            println!("[Config] Viewer set dynamic quality to: {}", dyn_q);
+                        }
                         if let Some(g) = cfg.grayscale {
                             s.grayscale = g;
                         }
@@ -146,6 +158,16 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
                                 state.force_full_sync.store(true, Ordering::Relaxed);
                             }
                         }
+                        if let Some(comp) = cfg.compression_method {
+                            if (4..=6).contains(&comp) {
+                                s.compression_method = comp;
+                                println!("[Config] Viewer set compression method to: {}", comp);
+                            }
+                        }
+                        if let Some(dyn_q) = cfg.dynamic_quality {
+                            s.dynamic_quality = dyn_q;
+                            println!("[Config] Viewer set dynamic quality to: {}", dyn_q);
+                        }
                         if let Some(g) = cfg.grayscale {
                             s.grayscale = g;
                             println!("[Config] Viewer set grayscale to: {}", g);
@@ -174,7 +196,7 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
             }
 
             // 2. Read dynamic streaming settings after config application
-            let (is_binary_mode, quality, grayscale, interval_ms, grid_cfg) = {
+            let (is_binary_mode, base_quality, grayscale, interval_ms, grid_cfg, compression_method, dynamic_quality) = {
                 let s = state.settings.lock().unwrap();
                 (
                     s.is_binary_mode,
@@ -182,6 +204,8 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
                     s.grayscale,
                     s.interval_ms,
                     s.get_grid_config(),
+                    s.compression_method,
+                    s.dynamic_quality,
                 )
             };
 
@@ -199,10 +223,37 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
             // 4. Diff grid
             let (dirty_cells, is_full_sync) = diff_tracker.diff_frame(&frame_buffer, force_full);
             let dirty_count = dirty_cells.len();
+            let total_cells = grid_cfg.total_cells;
+
+            // Calculate dynamic quality adjustment for fast changing scenes
+            let effective_quality = if dynamic_quality && !is_full_sync && total_cells > 0 {
+                let dirty_ratio = dirty_count as f32 / total_cells as f32;
+                if dirty_ratio >= 0.35 {
+                    // Fast scene with massive change (video/fast scrolling/drag)
+                    consecutive_fast_frames += 1;
+                    fast_motion_active = true;
+                    ((base_quality as f32) * 0.50).clamp(20.0, 95.0) as u8
+                } else if dirty_ratio >= 0.15 {
+                    // Moderate motion
+                    consecutive_fast_frames += 1;
+                    fast_motion_active = true;
+                    ((base_quality as f32) * 0.70).clamp(30.0, 95.0) as u8
+                } else {
+                    // Scene has stabilized: if coming out of rapid motion, force full crisp refresh
+                    if fast_motion_active && consecutive_fast_frames >= 2 {
+                        state.force_full_sync.store(true, Ordering::Relaxed);
+                    }
+                    consecutive_fast_frames = 0;
+                    fast_motion_active = false;
+                    base_quality
+                }
+            } else {
+                base_quality
+            };
 
             if !dirty_cells.is_empty() {
-                // 5. WebP encode
-                let encoder = CellEncoder::new(quality, grayscale, grid_cfg.cell_width, grid_cfg.cell_height);
+                // 5. WebP encode with compression_method (4, 5, 6) and effective_quality
+                let encoder = CellEncoder::new(effective_quality, grayscale, grid_cfg.cell_width, grid_cfg.cell_height, compression_method);
                 let mut encoded_cells = Vec::with_capacity(dirty_cells.len());
 
                 for dc in &dirty_cells {
@@ -229,7 +280,7 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
                 cells_since_metric += dirty_count;
 
                 // 7. Send to Relay
-                match current_client.send_screen(is_bin, &payload, grid_cfg.name, grid_cfg.cell_width, quality) {
+                match current_client.send_screen(is_bin, &payload, grid_cfg.name, grid_cfg.cell_width, effective_quality, compression_method, dynamic_quality) {
                     Ok(_) => {
                         let mut m = state.metrics.lock().unwrap();
                         m.is_connected = true;

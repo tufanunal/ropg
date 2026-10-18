@@ -21,6 +21,8 @@ pub struct HostConfig {
     pub is_running: Option<bool>,
     pub cell_size: Option<serde_json::Value>,
     pub grid_size: Option<String>,
+    pub compression_method: Option<i32>,
+    pub dynamic_quality: Option<bool>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -54,7 +56,7 @@ impl RelayClient {
     }
 
     /// POST /api/host/:host_id/screen
-    pub fn send_screen(&self, is_binary: bool, payload: &[u8], grid_preset: &str, cell_size: usize, quality: u8) -> Result<bool, String> {
+    pub fn send_screen(&self, is_binary: bool, payload: &[u8], grid_preset: &str, cell_size: usize, quality: u8, compression_method: i32, dynamic_quality: bool) -> Result<bool, String> {
         let url = format!("{}/api/host/{}/screen", self.relay_url, self.host_id);
 
         let mut headers = HeaderMap::new();
@@ -74,6 +76,12 @@ impl RelayClient {
         }
         if let Ok(val) = HeaderValue::from_str(&quality.to_string()) {
             headers.insert("X-Quality", val);
+        }
+        if let Ok(val) = HeaderValue::from_str(&compression_method.to_string()) {
+            headers.insert("X-Compression-Method", val);
+        }
+        if let Ok(val) = HeaderValue::from_str(if dynamic_quality { "true" } else { "false" }) {
+            headers.insert("X-Dynamic-Quality", val);
         }
 
         if !self.token.is_empty() {

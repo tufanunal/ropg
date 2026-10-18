@@ -1,20 +1,31 @@
-use webp::Encoder;
+use webp::{Encoder, WebPConfig};
 
 pub struct CellEncoder {
     pub quality: u8,
     pub grayscale: bool,
     pub cell_width: usize,
     pub cell_height: usize,
+    pub method: i32,
 }
 
 impl CellEncoder {
-    pub fn new(quality: u8, grayscale: bool, cell_width: usize, cell_height: usize) -> Self {
-        Self { quality, grayscale, cell_width, cell_height }
+    pub fn new(quality: u8, grayscale: bool, cell_width: usize, cell_height: usize, method: i32) -> Self {
+        Self {
+            quality,
+            grayscale,
+            cell_width,
+            cell_height,
+            method: method.clamp(4, 6),
+        }
     }
 
-    /// Encodes a cell's pixel buffer into real lossy/quality WebP bytes
+    /// Encodes a cell's pixel buffer into real lossy/quality WebP bytes with configurable compression method (4, 5, 6)
     pub fn encode_cell(&self, rgba: &[u8]) -> Result<Vec<u8>, String> {
         let q = self.quality.clamp(1, 100) as f32;
+
+        let mut config = WebPConfig::new().map_err(|_| "Failed to initialize WebPConfig".to_string())?;
+        config.quality = q;
+        config.method = self.method.clamp(4, 6);
 
         let memory = if self.grayscale {
             // Convert RGBA to 8-bit Grayscale replicated into RGB/RGBA
@@ -30,10 +41,10 @@ impl CellEncoder {
                 gray_rgba.push(255);
             }
             let encoder = Encoder::from_rgba(&gray_rgba, self.cell_width as u32, self.cell_height as u32);
-            encoder.encode(q)
+            encoder.encode_advanced(&config).map_err(|e| format!("WebP encode error: {:?}", e))?
         } else {
             let encoder = Encoder::from_rgba(rgba, self.cell_width as u32, self.cell_height as u32);
-            encoder.encode(q)
+            encoder.encode_advanced(&config).map_err(|e| format!("WebP encode error: {:?}", e))?
         };
 
         Ok(memory.to_vec())

@@ -163,8 +163,8 @@ const server = http.createServer(async (req, res) => {
   // Common CORS and security headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Rogp-Token, X-Payload-Mode, X-Cell-Size, X-Grid-Size, X-Quality');
-  res.setHeader('Access-Control-Expose-Headers', 'X-Payload-Mode, X-Screen-Timestamp, X-Host-Broadcasting, X-Cell-Size, X-Grid-Size, X-Quality');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Rogp-Token, X-Payload-Mode, X-Cell-Size, X-Grid-Size, X-Quality, X-Compression-Method, X-Dynamic-Quality');
+  res.setHeader('Access-Control-Expose-Headers', 'X-Payload-Mode, X-Screen-Timestamp, X-Host-Broadcasting, X-Cell-Size, X-Grid-Size, X-Quality, X-Compression-Method, X-Dynamic-Quality');
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
@@ -193,6 +193,12 @@ const server = http.createServer(async (req, res) => {
       }
       if (req.headers['x-quality']) {
         host.quality = parseInt(req.headers['x-quality'], 10);
+      }
+      if (req.headers['x-compression-method']) {
+        host.compressionMethod = parseInt(req.headers['x-compression-method'], 10);
+      }
+      if (req.headers['x-dynamic-quality']) {
+        host.dynamicQuality = req.headers['x-dynamic-quality'] === 'true';
       }
 
       host.stats.bytesReceived += rawBody.length;
@@ -246,7 +252,9 @@ const server = http.createServer(async (req, res) => {
           'X-Host-Broadcasting': host.isBroadcasting ? 'true' : 'false',
           'X-Cell-Size': String(host.cellSize || 40),
           'X-Grid-Size': String(host.gridSize || host.cellSize || '40x40'),
-          'X-Quality': String(host.quality || 80)
+          'X-Quality': String(host.quality || 80),
+          'X-Compression-Method': String(host.compressionMethod || 5),
+          'X-Dynamic-Quality': host.dynamicQuality !== false ? 'true' : 'false'
         });
         res.end();
         return;
@@ -260,7 +268,9 @@ const server = http.createServer(async (req, res) => {
           'X-Host-Broadcasting': host.isBroadcasting ? 'true' : 'false',
           'X-Cell-Size': String(host.cellSize || 40),
           'X-Grid-Size': String(host.gridSize || host.cellSize || '40x40'),
-          'X-Quality': String(host.quality || 80)
+          'X-Quality': String(host.quality || 80),
+          'X-Compression-Method': String(host.compressionMethod || 5),
+          'X-Dynamic-Quality': host.dynamicQuality !== false ? 'true' : 'false'
         });
         res.end(screen.data);
       } else {
@@ -271,7 +281,9 @@ const server = http.createServer(async (req, res) => {
           'X-Host-Broadcasting': host.isBroadcasting ? 'true' : 'false',
           'X-Cell-Size': String(host.cellSize || 40),
           'X-Grid-Size': String(host.gridSize || host.cellSize || '40x40'),
-          'X-Quality': String(host.quality || 80)
+          'X-Quality': String(host.quality || 80),
+          'X-Compression-Method': String(host.compressionMethod || 5),
+          'X-Dynamic-Quality': host.dynamicQuality !== false ? 'true' : 'false'
         });
         res.end(JSON.stringify(screen.data));
       }
@@ -358,6 +370,12 @@ const server = http.createServer(async (req, res) => {
         }
         if (typeof cfg.cell_size === 'number' || typeof cfg.cell_size === 'string') {
           host.cellSize = cfg.cell_size;
+        }
+        if (typeof cfg.compression_method === 'number') {
+          host.compressionMethod = cfg.compression_method;
+        }
+        if (typeof cfg.dynamic_quality === 'boolean') {
+          host.dynamicQuality = cfg.dynamic_quality;
         }
         // Trigger full sync on mode, quality, or grid size change
         host.fullSyncRequested = true;

@@ -64,6 +64,7 @@ fn main() -> eframe::Result {
         args.quality,
         args.grayscale,
         args.interval_ms,
+        !args.headless,
     );
 
     // Spawn the background screen capture & network worker thread

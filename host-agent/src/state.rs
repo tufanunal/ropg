@@ -11,6 +11,14 @@ fn default_cell_size() -> usize {
     40
 }
 
+fn default_compression_method() -> i32 {
+    5
+}
+
+fn default_dynamic_quality() -> bool {
+    true
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct HostSettings {
     pub relay_url: String,
@@ -25,6 +33,10 @@ pub struct HostSettings {
     pub grid_size: String,
     #[serde(default = "default_cell_size")]
     pub cell_size: usize,
+    #[serde(default = "default_compression_method")]
+    pub compression_method: i32,
+    #[serde(default = "default_dynamic_quality")]
+    pub dynamic_quality: bool,
 }
 
 impl HostSettings {
@@ -41,6 +53,14 @@ impl HostSettings {
             "384x360" | "284x360" | "384" | "284" => "384x360 (5x3, 15 cells)",
             "640x540" | "640" => "640x540 (3x2, 6 cells)",
             _ => "40x40 (48x27, 1296 cells)",
+        }
+    }
+
+    pub fn compression_label(&self) -> &str {
+        match self.compression_method {
+            4 => "Low Compression (Fastest, 4)",
+            6 => "High Compression (Smallest, 6)",
+            _ => "Normal Compression (Balanced, 5)",
         }
     }
 
@@ -92,6 +112,7 @@ impl HostSharedState {
         quality: u8,
         grayscale: bool,
         interval_ms: u64,
+        use_saved_settings: bool,
     ) -> Arc<Self> {
         let initial = HostSettings {
             relay_url,
@@ -104,8 +125,14 @@ impl HostSharedState {
             allow_input: true,
             grid_size: "40x40".to_string(),
             cell_size: 40,
+            compression_method: 5,
+            dynamic_quality: true,
         };
-        let active = HostSettings::load_or_default(initial);
+        let active = if use_saved_settings {
+            HostSettings::load_or_default(initial)
+        } else {
+            initial
+        };
 
         Arc::new(Self {
             is_running: AtomicBool::new(true),

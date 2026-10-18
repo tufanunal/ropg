@@ -215,6 +215,26 @@ impl eframe::App for RogpHostApp {
                 });
 
                 ui.horizontal(|ui| {
+                    ui.label("Compression:");
+                    let prev_comp = s.compression_method;
+                    egui::ComboBox::from_id_salt("compression_method_combo")
+                        .selected_text(s.compression_label())
+                        .width(220.0)
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(&mut s.compression_method, 4, "Low Compression (Fastest, 4)");
+                            ui.selectable_value(&mut s.compression_method, 5, "Normal Compression (Balanced, 5)");
+                            ui.selectable_value(&mut s.compression_method, 6, "High Compression (Smallest, 6)");
+                        });
+                    if s.compression_method != prev_comp {
+                        self.state.force_full_sync.store(true, Ordering::Relaxed);
+                    }
+                });
+
+                ui.horizontal(|ui| {
+                    ui.checkbox(&mut s.dynamic_quality, "⚡ Dynamic Quality (Auto-adjust on fast scenes)");
+                });
+
+                ui.horizontal(|ui| {
                     ui.checkbox(&mut s.grayscale, "Grayscale Mode (Maximum bandwidth saving)");
                 });
 

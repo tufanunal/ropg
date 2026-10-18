@@ -139,6 +139,27 @@ class RogpViewerApp {
       });
     }
 
+    const compressionSelect = document.getElementById('compression-select');
+    this.lastCompressionUserChangeTime = 0;
+    if (compressionSelect) {
+      compressionSelect.addEventListener('change', async () => {
+        this.lastCompressionUserChangeTime = Date.now();
+        const method = parseInt(compressionSelect.value, 10);
+        compressionSelect.blur();
+        await this.sendConfig({ compression_method: method });
+      });
+    }
+
+    const dynamicQualityCheckbox = document.getElementById('dynamic-quality-checkbox');
+    this.lastDynamicQualityUserChangeTime = 0;
+    if (dynamicQualityCheckbox) {
+      dynamicQualityCheckbox.addEventListener('change', async () => {
+        this.lastDynamicQualityUserChangeTime = Date.now();
+        const dynamicQuality = dynamicQualityCheckbox.checked;
+        await this.sendConfig({ dynamic_quality: dynamicQuality });
+      });
+    }
+
     const grayscaleBtn = document.getElementById('toggle-grayscale-btn');
     if (grayscaleBtn) {
       grayscaleBtn.addEventListener('click', async () => {
@@ -402,6 +423,25 @@ class RogpViewerApp {
         if (qualitySlider && parseInt(qualitySlider.value, 10) !== q && document.activeElement !== qualitySlider) {
           qualitySlider.value = String(q);
           if (qualityVal) qualityVal.textContent = `${q}%`;
+        }
+      }
+
+      // Synchronize Compression Method from Host (2-way sync)
+      const compHeader = res.headers.get('x-compression-method');
+      if (compHeader && (!this.lastCompressionUserChangeTime || Date.now() - this.lastCompressionUserChangeTime > 2500)) {
+        const compSelect = document.getElementById('compression-select');
+        if (compSelect && compSelect.value !== compHeader) {
+          compSelect.value = compHeader;
+        }
+      }
+
+      // Synchronize Dynamic Quality from Host (2-way sync)
+      const dynQHeader = res.headers.get('x-dynamic-quality');
+      if (dynQHeader !== null && (!this.lastDynamicQualityUserChangeTime || Date.now() - this.lastDynamicQualityUserChangeTime > 2500)) {
+        const dynQCheckbox = document.getElementById('dynamic-quality-checkbox');
+        const isDynQ = dynQHeader === 'true';
+        if (dynQCheckbox && dynQCheckbox.checked !== isDynQ) {
+          dynQCheckbox.checked = isDynQ;
         }
       }
 
