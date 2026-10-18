@@ -66,6 +66,7 @@ pub struct DirtyCell {
     pub cell_id: String,
     pub version: u32,
     pub rgba_data: Vec<u8>,
+    pub hash: u64,
 }
 
 pub struct GridDiffTracker {
@@ -216,6 +217,7 @@ impl GridDiffTracker {
                         cell_id: get_cell_id(r, c),
                         version: self.cell_versions[cell_idx],
                         rgba_data: rgba,
+                        hash: h,
                     });
                 }
             }

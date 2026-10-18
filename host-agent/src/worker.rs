@@ -261,20 +261,37 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
             };
 
             if !dirty_cells.is_empty() {
-                // 5. Parallel WebP encode with compression_method (4, 5, 6) and effective_quality across CPU cores
+                // 5. Deduplicate identical dirty cells within frame (Intra Block Copy / Hash Matching)
+                // Encode unique cells in parallel, then reuse the payload for identical duplicates
+                use std::collections::HashMap;
+
                 let encoder = CellEncoder::new(effective_quality, grayscale, grid_cfg.cell_width, grid_cfg.cell_height, compression_method);
-                let encoded_cells: Vec<EncodedCell> = dirty_cells
+
+                let mut unique_map: HashMap<u64, &crate::grid::DirtyCell> = HashMap::with_capacity(dirty_cells.len());
+                for dc in &dirty_cells {
+                    unique_map.entry(dc.hash).or_insert(dc);
+                }
+
+                let unique_cells: Vec<&crate::grid::DirtyCell> = unique_map.into_values().collect();
+                let encoded_map: HashMap<u64, Vec<u8>> = unique_cells
                     .par_iter()
                     .filter_map(|dc| {
-                        encoder.encode_cell(&dc.rgba_data).ok().map(|webp_bytes| EncodedCell {
+                        encoder.encode_cell(&dc.rgba_data).ok().map(|webp_bytes| (dc.hash, webp_bytes))
+                    })
+                    .collect();
+
+                let mut encoded_cells = Vec::with_capacity(dirty_cells.len());
+                for dc in &dirty_cells {
+                    if let Some(webp_bytes) = encoded_map.get(&dc.hash) {
+                        encoded_cells.push(EncodedCell {
                             row: dc.row as u8,
                             col: dc.col as u8,
                             cell_id: dc.cell_id.clone(),
                             version: dc.version,
-                            webp_data: webp_bytes,
-                        })
-                    })
-                    .collect();
+                            webp_data: webp_bytes.clone(),
+                        });
+                    }
+                }
 
                 // 6. Build packet
                 let (payload, is_bin) = if is_binary_mode {
