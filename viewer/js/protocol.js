@@ -64,6 +64,7 @@ export async function decodeBinaryPacket(arrayBuffer) {
 
   const cells = [];
   let offset = 16;
+  const blobDeduplication = new Map();
 
   for (let i = 0; i < cellCount; i++) {
     if (offset + 10 > arrayBuffer.byteLength) break;
@@ -79,10 +80,25 @@ export async function decodeBinaryPacket(arrayBuffer) {
       break;
     }
 
-    const webpBytes = new Uint8Array(arrayBuffer, offset, dataLen);
+    // Reuse identical Blob references within the packet to prevent V8 GC churn
+    let blobKey = null;
+    if (dataLen >= 8) {
+      const sig = view.getBigUint64(offset, false);
+      blobKey = `${dataLen}_${sig}`;
+    }
+
+    let blob;
+    if (blobKey && blobDeduplication.has(blobKey)) {
+      blob = blobDeduplication.get(blobKey);
+    } else {
+      const webpBytes = new Uint8Array(arrayBuffer, offset, dataLen);
+      blob = new Blob([webpBytes], { type: 'image/webp' });
+      if (blobKey) {
+        blobDeduplication.set(blobKey, blob);
+      }
+    }
     offset += dataLen;
 
-    const blob = new Blob([webpBytes], { type: 'image/webp' });
     const cellId = getCellId(row, col);
 
     cells.push({

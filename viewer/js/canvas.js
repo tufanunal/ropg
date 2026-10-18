@@ -99,39 +99,49 @@ export class ScreenCanvas {
       this.cellVersions.clear();
     }
 
-    const updates = [];
-    for (const cell of cells) {
-      this.cellVersions.set(cell.cellId, cell.version);
-      updates.push(this.renderCell(cell));
+    if (!cells || cells.length === 0) return;
+
+    // 1. Concurrent off-thread bitmap decoding across browser threads
+    const decoded = await Promise.all(
+      cells.map(async (cell) => {
+        this.cellVersions.set(cell.cellId, cell.version);
+        try {
+          const bitmap = await createImageBitmap(cell.blob);
+          return {
+            bitmap,
+            x: cell.col * this.cellWidth,
+            y: cell.row * this.cellHeight
+          };
+        } catch (err) {
+          console.warn(`Failed to decode cell ${cell.cellId}:`, err);
+          return null;
+        }
+      })
+    );
+
+    // 2. Synchronous batch blit to canvas (zero context yield or interruption)
+    for (let i = 0; i < decoded.length; i++) {
+      const item = decoded[i];
+      if (item && item.bitmap) {
+        this.ctx.drawImage(item.bitmap, item.x, item.y, this.cellWidth, this.cellHeight);
+        item.bitmap.close();
+
+        if (this.flashUpdatedCells && this.overlayCtx) {
+          this.overlayCtx.fillStyle = 'rgba(56, 189, 248, 0.4)';
+          this.overlayCtx.fillRect(item.x, item.y, this.cellWidth, this.cellHeight);
+          setTimeout(() => {
+            if (this.overlayCtx) {
+              this.overlayCtx.clearRect(item.x, item.y, this.cellWidth, this.cellHeight);
+            }
+          }, 120);
+        }
+      }
     }
 
-    await Promise.all(updates);
     this.totalCellsUpdated += cells.length;
 
     if (this.showGrid) {
       this.renderGridOverlay();
-    }
-  }
-
-  async renderCell(cell) {
-    const x = cell.col * this.cellWidth;
-    const y = cell.row * this.cellHeight;
-
-    try {
-      // Use createImageBitmap for fast off-thread decode
-      const bitmap = await createImageBitmap(cell.blob);
-      this.ctx.drawImage(bitmap, x, y, this.cellWidth, this.cellHeight);
-      bitmap.close();
-
-      if (this.flashUpdatedCells && this.overlayCtx) {
-        this.overlayCtx.fillStyle = 'rgba(56, 189, 248, 0.4)'; // Sky blue highlight
-        this.overlayCtx.fillRect(x, y, this.cellWidth, this.cellHeight);
-        setTimeout(() => {
-          this.overlayCtx.clearRect(x, y, this.cellWidth, this.cellHeight);
-        }, 120);
-      }
-    } catch (err) {
-      console.warn(`Failed to render cell ${cell.cellId}:`, err);
     }
   }
 
