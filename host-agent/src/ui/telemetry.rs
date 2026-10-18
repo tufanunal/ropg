@@ -53,8 +53,8 @@ pub fn render_telemetry_card(ui: &mut Ui, state: &Arc<HostSharedState>) {
 
         ui.horizontal(|ui| {
             let total_w = ui.available_width();
-            let spark_w = (total_w * 0.40).clamp(280.0, 480.0);
-            let stats_w = total_w - spark_w - 14.0;
+            let spark_w = (total_w * 0.35).clamp(260.0, 420.0);
+            let stats_w = total_w - spark_w - 20.0;
 
             // Left Grid: Sparkline graph
             ui.allocate_ui(vec2(spark_w, 110.0), |ui| {
@@ -67,10 +67,10 @@ pub fn render_telemetry_card(ui: &mut Ui, state: &Arc<HostSharedState>) {
                 render_sparkline(ui, &history, kb_s, peak_kb_s, spark_w, 90.0);
             });
 
-            ui.add_space(10.0);
+            ui.add_space(12.0);
 
             // Right Grid: 6 Metric Stat Boxes in 3 columns x 2 rows
-            let box_width = ((stats_w - 20.0) / 3.0).floor();
+            let box_outer_width = (((stats_w - 32.0) / 3.0).floor() - 8.0).max(160.0);
             ui.allocate_ui(vec2(stats_w, 110.0), |ui| {
                 Grid::new("telemetry_grid_boxes")
                     .num_columns(3)
@@ -78,7 +78,7 @@ pub fn render_telemetry_card(ui: &mut Ui, state: &Arc<HostSharedState>) {
                     .show(ui, |ui| {
                         render_stat_box(
                             ui,
-                            box_width,
+                            box_outer_width,
                             "Current Bandwidth",
                             &format!("{:.1} KB/s", kb_s),
                             &format!("Peak: {:.1} KB/s", peak_kb_s),
@@ -86,7 +86,7 @@ pub fn render_telemetry_card(ui: &mut Ui, state: &Arc<HostSharedState>) {
                         );
                         render_stat_box(
                             ui,
-                            box_width,
+                            box_outer_width,
                             "Grid Cell Updates",
                             &format!("{} cells/s", cells_s),
                             &format!("{:.1}% of total screen", dirty_percent),
@@ -94,7 +94,7 @@ pub fn render_telemetry_card(ui: &mut Ui, state: &Arc<HostSharedState>) {
                         );
                         render_stat_box(
                             ui,
-                            box_width,
+                            box_outer_width,
                             "Total Payload Sent",
                             &format!("{:.2} MB", total_bytes as f64 / 1_048_576.0),
                             &format!("{} bytes", total_bytes),
@@ -104,7 +104,7 @@ pub fn render_telemetry_card(ui: &mut Ui, state: &Arc<HostSharedState>) {
 
                         render_stat_box(
                             ui,
-                            box_width,
+                            box_outer_width,
                             "Last Input Command",
                             &last_input,
                             &format!("seq: {}", last_seq),
@@ -112,7 +112,7 @@ pub fn render_telemetry_card(ui: &mut Ui, state: &Arc<HostSharedState>) {
                         );
                         render_stat_box(
                             ui,
-                            box_width,
+                            box_outer_width,
                             "Grid Partition",
                             &format!("{} cells", grid_cfg.total_cells),
                             &format!("{} cols x {} rows", grid_cfg.cols, grid_cfg.rows),
@@ -120,7 +120,7 @@ pub fn render_telemetry_card(ui: &mut Ui, state: &Arc<HostSharedState>) {
                         );
                         render_stat_box(
                             ui,
-                            box_width,
+                            box_outer_width,
                             "Network Latency",
                             &format!("{} ms", rtt_ms),
                             "HTTP GET / POST RTT",
@@ -226,22 +226,24 @@ fn render_sparkline(ui: &mut Ui, history: &[f32], current_kb_s: f32, peak_kb_s: 
 
 fn render_stat_box(
     ui: &mut Ui,
-    width: f32,
+    box_outer_width: f32,
     title: &str,
     primary_val: &str,
     subtitle: &str,
     val_color: Color32,
 ) {
     inner_box_frame().show(ui, |ui| {
-        ui.set_width(width);
-        ui.label(RichText::new(title).color(COLOR_TEXT_MUTED).size(10.0));
+        let content_w = (box_outer_width - 20.0).max(60.0);
+        ui.set_max_width(content_w);
+        ui.set_width(content_w);
+        ui.label(RichText::new(title).color(COLOR_TEXT_MUTED).size(9.5));
         ui.add_space(1.0);
         ui.label(
             RichText::new(primary_val)
                 .color(val_color)
                 .strong()
-                .size(13.5),
+                .size(13.0),
         );
-        ui.label(RichText::new(subtitle).color(COLOR_TEXT_MUTED).size(9.0));
+        ui.label(RichText::new(subtitle).color(COLOR_TEXT_MUTED).size(8.5));
     });
 }

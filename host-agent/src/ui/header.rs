@@ -15,7 +15,7 @@ pub fn render_top_bar(ui: &mut Ui) {
         );
         ui.add_space(6.0);
         ui.label(
-            RichText::new("Host Agent v1.2.0")
+            RichText::new("Host Agent")
                 .color(COLOR_TEXT_PRIMARY)
                 .strong()
                 .size(14.0),
@@ -26,16 +26,6 @@ pub fn render_top_bar(ui: &mut Ui) {
                 .color(COLOR_TEXT_MUTED)
                 .size(11.5),
         );
-
-        // Window decoration dots on far right matching reference image
-        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            ui.add_space(4.0);
-            render_dot(ui, Color32::from_rgb(39, 201, 63));
-            ui.add_space(3.0);
-            render_dot(ui, Color32::from_rgb(255, 189, 46));
-            ui.add_space(3.0);
-            render_dot(ui, Color32::from_rgb(255, 95, 86));
-        });
     });
 }
 

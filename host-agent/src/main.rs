@@ -84,7 +84,7 @@ fn main() -> eframe::Result {
     let icon_data = load_app_icon();
 
     let mut viewport = eframe::egui::ViewportBuilder::default()
-        .with_title("ROGP Host Agent v1.2.0 - FHD Grid Diffing Engine")
+        .with_title("ROGP Host Agent - FHD Grid Diffing Engine")
         .with_inner_size([1600.0, 900.0])
         .with_min_inner_size([1600.0, 900.0])
         .with_max_inner_size([1600.0, 900.0])
@@ -101,7 +101,7 @@ fn main() -> eframe::Result {
     };
 
     eframe::run_native(
-        "ROGP Host Agent v1.2.0 - FHD Grid Diffing Engine",
+        "ROGP Host Agent - FHD Grid Diffing Engine",
         native_options,
         Box::new(|cc| Ok(Box::new(RogpHostApp::new(cc, state)))),
     )
