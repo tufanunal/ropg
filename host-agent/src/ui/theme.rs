@@ -27,15 +27,15 @@ pub fn setup_custom_theme(ctx: &Context) {
 
     visuals.widgets.inactive.bg_fill = COLOR_SURFACE_INPUT;
     visuals.widgets.inactive.bg_stroke = Stroke::new(1.0, COLOR_BORDER_CARD);
-    visuals.widgets.inactive.corner_radius = CornerRadius::same(5);
+    visuals.widgets.inactive.corner_radius = CornerRadius::same(4);
 
     visuals.widgets.hovered.bg_fill = Color32::from_rgb(25, 35, 55);
     visuals.widgets.hovered.bg_stroke = Stroke::new(1.0, COLOR_ACCENT_CYAN);
-    visuals.widgets.hovered.corner_radius = CornerRadius::same(5);
+    visuals.widgets.hovered.corner_radius = CornerRadius::same(4);
 
     visuals.widgets.active.bg_fill = COLOR_ACCENT_CYAN;
     visuals.widgets.active.fg_stroke = Stroke::new(1.0, Color32::BLACK);
-    visuals.widgets.active.corner_radius = CornerRadius::same(5);
+    visuals.widgets.active.corner_radius = CornerRadius::same(4);
 
     ctx.set_visuals(visuals);
 }
@@ -45,15 +45,15 @@ pub fn card_frame() -> Frame {
         .fill(COLOR_SURFACE_CARD)
         .stroke(Stroke::new(1.0, COLOR_BORDER_CARD))
         .corner_radius(CornerRadius::same(8))
-        .inner_margin(Margin::symmetric(14, 10))
+        .inner_margin(Margin::symmetric(12, 8))
 }
 
 pub fn inner_box_frame() -> Frame {
     Frame::new()
         .fill(COLOR_SURFACE_INPUT)
         .stroke(Stroke::new(1.0, COLOR_BORDER_CARD))
-        .corner_radius(CornerRadius::same(6))
-        .inner_margin(Margin::symmetric(10, 6))
+        .corner_radius(CornerRadius::same(5))
+        .inner_margin(Margin::symmetric(8, 4))
 }
 
 pub fn pill_frame() -> Frame {
@@ -61,5 +61,5 @@ pub fn pill_frame() -> Frame {
         .fill(COLOR_SURFACE_INPUT)
         .stroke(Stroke::new(1.0, COLOR_BORDER_CARD))
         .corner_radius(CornerRadius::same(4))
-        .inner_margin(Margin::symmetric(8, 4))
+        .inner_margin(Margin::symmetric(6, 3))
 }

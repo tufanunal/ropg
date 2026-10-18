@@ -12,21 +12,21 @@ pub fn render_connection_panel(ui: &mut Ui, state: &Arc<HostSharedState>) {
             RichText::new("RELAY SERVER & CONNECTION CONFIG")
                 .color(COLOR_ACCENT_CYAN)
                 .strong()
-                .size(12.5),
+                .size(12.0),
         );
-        ui.add_space(6.0);
+        ui.add_space(4.0);
 
         let mut s = state.settings.lock().unwrap();
 
         // Host Machine Identifier
-        ui.label(RichText::new("Host Machine Identifier").color(COLOR_TEXT_MUTED).size(11.0));
+        ui.label(RichText::new("Host Machine Identifier").color(COLOR_TEXT_MUTED).size(10.5));
         ui.horizontal(|ui| {
             ui.add(
                 TextEdit::singleline(&mut s.host_id)
                     .hint_text("host-1")
-                    .desired_width(ui.available_width() - 90.0),
+                    .desired_width(ui.available_width() - 86.0),
             );
-            if ui.add(Button::new(RichText::new("Random").size(11.0)).min_size(vec2(76.0, 24.0))).clicked() {
+            if ui.add(Button::new(RichText::new("Random").size(10.5)).min_size(vec2(76.0, 22.0))).clicked() {
                 let random_id = format!(
                     "host-{}",
                     (std::time::SystemTime::now()
@@ -40,17 +40,17 @@ pub fn render_connection_panel(ui: &mut Ui, state: &Arc<HostSharedState>) {
             }
         });
 
-        ui.add_space(6.0);
+        ui.add_space(4.0);
 
         // Relay Server Endpoint
-        ui.label(RichText::new("Relay Server Endpoint").color(COLOR_TEXT_MUTED).size(11.0));
+        ui.label(RichText::new("Relay Server Endpoint").color(COLOR_TEXT_MUTED).size(10.5));
         ui.horizontal(|ui| {
             ui.add(
                 TextEdit::singleline(&mut s.relay_url)
                     .hint_text("https://relay.example.com")
-                    .desired_width(ui.available_width() - 90.0),
+                    .desired_width(ui.available_width() - 86.0),
             );
-            if ui.add(Button::new(RichText::new("Test").size(11.0)).min_size(vec2(76.0, 24.0))).clicked() {
+            if ui.add(Button::new(RichText::new("Test").size(10.5)).min_size(vec2(76.0, 22.0))).clicked() {
                 let test_url = s.relay_url.clone();
                 let test_state = state.clone();
                 std::thread::spawn(move || {
@@ -93,45 +93,45 @@ pub fn render_connection_panel(ui: &mut Ui, state: &Arc<HostSharedState>) {
                     } else {
                         COLOR_ACCENT_RED
                     })
-                    .size(10.0),
+                    .size(9.5),
             );
         }
 
-        ui.add_space(6.0);
+        ui.add_space(4.0);
 
         // Secret Authentication Token
-        ui.label(RichText::new("Secret Authentication Token").color(COLOR_TEXT_MUTED).size(11.0));
+        ui.label(RichText::new("Secret Authentication Token").color(COLOR_TEXT_MUTED).size(10.5));
         ui.horizontal(|ui| {
             let hide_pw = !s.show_token;
             ui.add(
                 TextEdit::singleline(&mut s.token)
                     .password(hide_pw)
-                    .desired_width(ui.available_width() - 90.0),
+                    .desired_width(ui.available_width() - 86.0),
             );
             let toggle_label = if s.show_token { "Hide" } else { "Show" };
-            if ui.add(Button::new(RichText::new(toggle_label).size(11.0)).min_size(vec2(76.0, 24.0))).clicked() {
+            if ui.add(Button::new(RichText::new(toggle_label).size(10.5)).min_size(vec2(76.0, 22.0))).clicked() {
                 s.show_token = !s.show_token;
             }
         });
 
-        ui.add_space(8.0);
+        ui.add_space(6.0);
 
         let (is_conn, rtt) = {
             let m = state.metrics.lock().unwrap();
             (m.is_connected, m.rtt_latency_ms)
         };
 
-        // Relay Handshake Status Card (with green border matching screenshot)
+        // Relay Handshake Status Card (green border matching screenshot)
         Frame::new()
             .fill(COLOR_SURFACE_INPUT)
             .stroke(Stroke::new(1.0, COLOR_ACCENT_GREEN))
-            .corner_radius(CornerRadius::same(6))
-            .inner_margin(Margin::symmetric(10, 8))
+            .corner_radius(CornerRadius::same(5))
+            .inner_margin(Margin::symmetric(8, 6))
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
                     let dot_color = if is_conn { COLOR_ACCENT_GREEN } else { COLOR_ACCENT_BLUE };
                     let (dot_rect, _) = ui.allocate_exact_size(vec2(8.0, 8.0), eframe::egui::Sense::hover());
-                    ui.painter().circle_filled(dot_rect.center(), 3.5, dot_color);
+                    ui.painter().circle_filled(dot_rect.center(), 3.0, dot_color);
                     ui.add_space(2.0);
 
                     let title_text = if is_conn {
@@ -143,13 +143,13 @@ pub fn render_connection_panel(ui: &mut Ui, state: &Arc<HostSharedState>) {
                         RichText::new(title_text)
                             .color(COLOR_ACCENT_GREEN)
                             .strong()
-                            .size(11.5),
+                            .size(11.0),
                     );
                 });
                 ui.label(
                     RichText::new("Connected to Relay Server via HTTP Polling")
                         .color(COLOR_TEXT_MUTED)
-                        .size(10.0),
+                        .size(9.5),
                 );
                 ui.label(
                     RichText::new(format!(
@@ -157,49 +157,48 @@ pub fn render_connection_panel(ui: &mut Ui, state: &Arc<HostSharedState>) {
                         rtt
                     ))
                     .color(COLOR_TEXT_MUTED)
-                    .size(9.0),
+                    .size(8.5),
                 );
             });
 
-        ui.add_space(8.0);
+        ui.add_space(6.0);
 
-        // Security & Synthetic Input Controls Info Box (with amber border & heading)
+        // Security & Synthetic Input Controls Info Box (amber border)
         Frame::new()
             .fill(Color32::from_rgb(18, 15, 24))
             .stroke(Stroke::new(1.0, Color32::from_rgb(70, 48, 25)))
-            .corner_radius(CornerRadius::same(6))
-            .inner_margin(Margin::symmetric(10, 8))
+            .corner_radius(CornerRadius::same(5))
+            .inner_margin(Margin::symmetric(8, 6))
             .show(ui, |ui| {
                 ui.label(
                     RichText::new("Security & Synthetic Input Controls")
                         .color(COLOR_ACCENT_AMBER)
                         .strong()
-                        .size(11.0),
+                        .size(10.5),
                 );
-                ui.add_space(2.0);
                 ui.label(
                     RichText::new("- Synthetic Hardware Cursor Exclusion: ACTIVE (Prevents screen dirtying)")
                         .color(COLOR_TEXT_MUTED)
-                        .size(9.0),
+                        .size(8.5),
                 );
                 ui.label(
                     RichText::new("- Input Rate Limiting: 50ms Drag Throttle / 200ms Hover Rest")
                         .color(COLOR_TEXT_MUTED)
-                        .size(9.0),
+                        .size(8.5),
                 );
                 ui.label(
                     RichText::new("- Emergency Input Kill-Switch: Press Ctrl+Shift+Esc to disable")
                         .color(COLOR_TEXT_MUTED)
-                        .size(9.0),
+                        .size(8.5),
                 );
                 ui.label(
                     RichText::new("- Session Security: Double-click sequence protection enabled")
                         .color(COLOR_TEXT_MUTED)
-                        .size(9.0),
+                        .size(8.5),
                 );
             });
 
-        ui.add_space(10.0);
+        ui.add_space(8.0);
 
         // Save & Disconnect Footer Buttons matching screenshot
         ui.horizontal(|ui| {
@@ -207,26 +206,26 @@ pub fn render_connection_panel(ui: &mut Ui, state: &Arc<HostSharedState>) {
                 RichText::new("Save & Apply Settings")
                     .color(COLOR_SURFACE_INPUT)
                     .strong()
-                    .size(12.0),
+                    .size(11.5),
             )
             .fill(COLOR_ACCENT_CYAN)
-            .min_size(vec2(160.0, 32.0));
+            .min_size(vec2(150.0, 28.0));
 
             if ui.add(save_btn).clicked() {
                 s.save();
                 state.force_full_sync.store(true, Ordering::Relaxed);
             }
 
-            ui.add_space(12.0);
+            ui.add_space(10.0);
 
             let dc_btn = Button::new(
                 RichText::new("Disconnect Agent")
                     .color(COLOR_ACCENT_RED)
                     .strong()
-                    .size(12.0),
+                    .size(11.5),
             )
             .fill(COLOR_SURFACE_INPUT)
-            .min_size(vec2(140.0, 32.0));
+            .min_size(vec2(130.0, 28.0));
 
             if ui.add(dc_btn).clicked() {
                 state.is_running.store(false, Ordering::Relaxed);

@@ -25,7 +25,7 @@ pub fn render_top_bar(ui: &mut Ui) {
                 .size(11.0),
         );
 
-        // Three window decoration dots on far right
+        // Three window decoration dots on far right matching reference image
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             ui.add_space(2.0);
             render_dot(ui, Color32::from_rgb(39, 201, 63));
@@ -72,27 +72,28 @@ pub fn render_hero_status(ui: &mut Ui, state: &Arc<HostSharedState>) {
                 "STREAMING PAUSED"
             };
 
-            render_dot(ui, status_color);
-            ui.add_space(4.0);
-            ui.label(
-                RichText::new(status_text)
-                    .color(status_color)
-                    .strong()
-                    .size(13.0),
-            );
-
-            ui.add_space(8.0);
-
-            // Connected Relay tag
-            ui.label(
-                RichText::new(format!("Relay: {} (Connected - {}ms)", relay_url, rtt_ms))
-                    .color(COLOR_TEXT_MUTED)
-                    .size(11.0),
-            );
+            // Left Section: Status & Relay URL stacked in 2 compact lines
+            ui.vertical(|ui| {
+                ui.horizontal(|ui| {
+                    render_dot(ui, status_color);
+                    ui.add_space(4.0);
+                    ui.label(
+                        RichText::new(status_text)
+                            .color(status_color)
+                            .strong()
+                            .size(12.5),
+                    );
+                });
+                ui.label(
+                    RichText::new(format!("Relay: {} (Connected - {}ms)", relay_url, rtt_ms))
+                        .color(COLOR_TEXT_MUTED)
+                        .size(10.0),
+                );
+            });
 
             ui.add_space(12.0);
 
-            // Quick Stats Pills row
+            // Middle: Quick Stats Pills
             render_stat_pill(ui, "UPLOADING", &format!("{:.1} KB/s", kb_s), COLOR_ACCENT_CYAN);
             render_stat_pill(ui, "DIRTY RATE", &format!("{} cells/s", cells_s), COLOR_ACCENT_BLUE);
             render_stat_pill(ui, "TOTAL TRANSFERRED", &format!("{:.2} MB", total_mb), COLOR_TEXT_PRIMARY);

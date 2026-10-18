@@ -46,34 +46,34 @@ pub fn render_telemetry_card(ui: &mut Ui, state: &Arc<HostSharedState>) {
             RichText::new("LIVE TELEMETRY & SYSTEM METRICS")
                 .color(COLOR_ACCENT_CYAN)
                 .strong()
-                .size(12.5),
+                .size(12.0),
         );
         ui.add_space(4.0);
 
         ui.horizontal(|ui| {
             let total_width = ui.available_width();
-            let left_width = (total_width * 0.44).clamp(320.0, 480.0);
-            let right_width = (total_width - left_width - 14.0).max(400.0);
+            let spark_w = 340.0f32.min(total_width * 0.35);
+            let stats_w = total_width - spark_w - 12.0;
 
             // Left side: Sparkline graph
-            ui.allocate_ui(vec2(left_width, 94.0), |ui| {
+            ui.allocate_ui(vec2(spark_w, 82.0), |ui| {
                 ui.label(
                     RichText::new("Upload Bandwidth History (KB/s)")
                         .color(COLOR_TEXT_MUTED)
-                        .size(10.0),
+                        .size(9.5),
                 );
                 ui.add_space(2.0);
-                render_sparkline(ui, &history, kb_s, peak_kb_s, left_width, 76.0);
+                render_sparkline(ui, &history, kb_s, peak_kb_s, spark_w, 64.0);
             });
 
             ui.add_space(8.0);
 
             // Right side: 6 Metric Stat Boxes in 3 columns x 2 rows
-            let box_width = ((right_width - 16.0) / 3.0).max(110.0);
-            ui.allocate_ui(vec2(right_width, 94.0), |ui| {
+            let box_width = ((stats_w - 20.0) / 3.0).floor();
+            ui.allocate_ui(vec2(stats_w, 82.0), |ui| {
                 Grid::new("telemetry_grid_boxes")
                     .num_columns(3)
-                    .spacing([8.0, 6.0])
+                    .spacing([8.0, 5.0])
                     .show(ui, |ui| {
                         render_stat_box(
                             ui,
@@ -138,8 +138,8 @@ fn render_sparkline(ui: &mut Ui, history: &[f32], current_kb_s: f32, peak_kb_s: 
     let painter = ui.painter_at(rect);
 
     // Background and subtle border
-    painter.rect_filled(rect, 6.0, COLOR_SURFACE_INPUT);
-    painter.rect_stroke(rect, 6.0, Stroke::new(1.0, COLOR_BORDER_CARD), eframe::egui::StrokeKind::Inside);
+    painter.rect_filled(rect, 5.0, COLOR_SURFACE_INPUT);
+    painter.rect_stroke(rect, 5.0, Stroke::new(1.0, COLOR_BORDER_CARD), eframe::egui::StrokeKind::Inside);
 
     // Subtle horizontal grid guidelines
     for i in 1..3 {
@@ -166,8 +166,8 @@ fn render_sparkline(ui: &mut Ui, history: &[f32], current_kb_s: f32, peak_kb_s: 
     }
     max_val *= 1.12;
 
-    let pad_x = 8.0;
-    let pad_y = 6.0;
+    let pad_x = 6.0;
+    let pad_y = 5.0;
     let plot_w = (rect.width() - pad_x * 2.0).max(1.0);
     let plot_h = (rect.height() - pad_y * 2.0).max(1.0);
 
@@ -202,23 +202,23 @@ fn render_sparkline(ui: &mut Ui, history: &[f32], current_kb_s: f32, peak_kb_s: 
 
         // Latest value dot
         if let Some(&last_pt) = points.last() {
-            painter.circle_filled(last_pt, 3.5, COLOR_ACCENT_CYAN);
+            painter.circle_filled(last_pt, 3.0, COLOR_ACCENT_CYAN);
         }
     }
 
     // Telemetry text overlay
     painter.text(
-        Pos2::new(rect.left() + 8.0, rect.top() + 5.0),
+        Pos2::new(rect.left() + 6.0, rect.top() + 4.0),
         eframe::egui::Align2::LEFT_TOP,
         format!("LIVE: {:.1} KB/s", current_kb_s),
-        eframe::egui::FontId::monospace(10.0),
+        eframe::egui::FontId::monospace(9.5),
         Color32::from_rgb(15, 23, 42),
     );
     painter.text(
-        Pos2::new(rect.right() - 8.0, rect.top() + 5.0),
+        Pos2::new(rect.right() - 6.0, rect.top() + 4.0),
         eframe::egui::Align2::RIGHT_TOP,
         format!("MAX: {:.1} KB/s", max_val),
-        eframe::egui::FontId::monospace(9.0),
+        eframe::egui::FontId::monospace(8.5),
         COLOR_TEXT_MUTED,
     );
 }
@@ -233,13 +233,12 @@ fn render_stat_box(
 ) {
     inner_box_frame().show(ui, |ui| {
         ui.set_width(width);
-        ui.label(RichText::new(title).color(COLOR_TEXT_MUTED).size(10.0));
-        ui.add_space(1.0);
+        ui.label(RichText::new(title).color(COLOR_TEXT_MUTED).size(9.5));
         ui.label(
             RichText::new(primary_val)
                 .color(val_color)
                 .strong()
-                .size(13.0),
+                .size(12.5),
         );
         ui.label(RichText::new(subtitle).color(COLOR_TEXT_MUTED).size(8.5));
     });
