@@ -80,14 +80,23 @@ fn main() -> eframe::Result {
     // Force winit X11 scale factor to 1.0 so 1600x900 is strictly physical pixels
     std::env::set_var("WINIT_X11_SCALE_FACTOR", "1.0");
 
-    // Launch Native Linux (Debian 12) GUI
+    // Load ROGP application icon
+    let icon_data = load_app_icon();
+
+    let mut viewport = eframe::egui::ViewportBuilder::default()
+        .with_title("ROGP Host Agent v1.2.0 - FHD Grid Diffing Engine")
+        .with_inner_size([1600.0, 900.0])
+        .with_min_inner_size([1600.0, 900.0])
+        .with_max_inner_size([1600.0, 900.0])
+        .with_resizable(false);
+
+    if let Some(icon) = icon_data {
+        viewport = viewport.with_icon(icon);
+    }
+
+    // Launch Native GUI
     let native_options = eframe::NativeOptions {
-        viewport: eframe::egui::ViewportBuilder::default()
-            .with_title("ROGP Host Agent v1.2.0 - FHD Grid Diffing Engine")
-            .with_inner_size([1600.0, 900.0])
-            .with_min_inner_size([1600.0, 900.0])
-            .with_max_inner_size([1600.0, 900.0])
-            .with_resizable(false),
+        viewport,
         ..Default::default()
     };
 
@@ -96,4 +105,15 @@ fn main() -> eframe::Result {
         native_options,
         Box::new(|cc| Ok(Box::new(RogpHostApp::new(cc, state)))),
     )
+}
+
+fn load_app_icon() -> Option<eframe::egui::IconData> {
+    let icon_bytes = include_bytes!("assets/icon.png");
+    let img = image::load_from_memory(icon_bytes).ok()?.to_rgba8();
+    let (width, height) = img.dimensions();
+    Some(eframe::egui::IconData {
+        rgba: img.into_raw(),
+        width,
+        height,
+    })
 }
