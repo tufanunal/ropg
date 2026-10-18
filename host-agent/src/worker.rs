@@ -10,6 +10,7 @@ use crate::grid::GridDiffTracker;
 use crate::input::InputDispatcher;
 use crate::packet::{build_binary_packet, build_json_packet, EncodedCell};
 use crate::state::HostSharedState;
+use rayon::prelude::*;
 
 pub fn start_worker_thread(state: Arc<HostSharedState>) {
     std::thread::spawn(move || {
@@ -260,21 +261,20 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
             };
 
             if !dirty_cells.is_empty() {
-                // 5. WebP encode with compression_method (4, 5, 6) and effective_quality
+                // 5. Parallel WebP encode with compression_method (4, 5, 6) and effective_quality across CPU cores
                 let encoder = CellEncoder::new(effective_quality, grayscale, grid_cfg.cell_width, grid_cfg.cell_height, compression_method);
-                let mut encoded_cells = Vec::with_capacity(dirty_cells.len());
-
-                for dc in &dirty_cells {
-                    if let Ok(webp_bytes) = encoder.encode_cell(&dc.rgba_data) {
-                        encoded_cells.push(EncodedCell {
+                let encoded_cells: Vec<EncodedCell> = dirty_cells
+                    .par_iter()
+                    .filter_map(|dc| {
+                        encoder.encode_cell(&dc.rgba_data).ok().map(|webp_bytes| EncodedCell {
                             row: dc.row as u8,
                             col: dc.col as u8,
                             cell_id: dc.cell_id.clone(),
                             version: dc.version,
                             webp_data: webp_bytes,
-                        });
-                    }
-                }
+                        })
+                    })
+                    .collect();
 
                 // 6. Build packet
                 let (payload, is_bin) = if is_binary_mode {
