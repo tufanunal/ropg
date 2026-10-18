@@ -80,15 +80,15 @@ fn main() -> eframe::Result {
     // Launch Native Linux (Debian 12) GUI
     let native_options = eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder::default()
-            .with_title("Rogp Host Agent - Debian 12")
-            .with_inner_size([520.0, 640.0])
-            .with_min_inner_size([460.0, 540.0]),
+            .with_title("ROGP Host Agent v1.2.0 - FHD Grid Diffing Engine")
+            .with_inner_size([1100.0, 780.0])
+            .with_min_inner_size([900.0, 600.0]),
         ..Default::default()
     };
 
     eframe::run_native(
-        "Rogp Host Agent - Debian 12",
+        "ROGP Host Agent v1.2.0 - FHD Grid Diffing Engine",
         native_options,
-        Box::new(|_cc| Ok(Box::new(RogpHostApp::new(state)))),
+        Box::new(|cc| Ok(Box::new(RogpHostApp::new(cc, state)))),
     )
 }

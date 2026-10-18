@@ -49,11 +49,16 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
 
             // Check if user paused sharing via UI
             if !state.is_running.load(Ordering::Relaxed) {
-                {
+                if last_metric_time.elapsed() >= Duration::from_millis(1000) {
                     let mut m = state.metrics.lock().unwrap();
                     m.last_seen_status = "Broadcast Paused".to_string();
                     m.current_kb_per_sec = 0.0;
                     m.dirty_cells_per_sec = 0;
+                    if m.bandwidth_history.len() >= 60 {
+                        m.bandwidth_history.remove(0);
+                    }
+                    m.bandwidth_history.push(0.0);
+                    last_metric_time = Instant::now();
                 }
 
                 // While paused, still poll Relay for Resume command & config
@@ -182,7 +187,10 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
                         let allow_in = { state.settings.lock().unwrap().allow_input };
                         let mut m = state.metrics.lock().unwrap();
                         let last_cmd = inputs.last().unwrap();
-                        m.last_input_event = format!("{} (seq: {:?})", last_cmd.event_type, last_cmd.seq_id);
+                        m.last_input_event = last_cmd.event_type.clone();
+                        if let Some(seq) = last_cmd.seq_id {
+                            m.last_input_seq = seq;
+                        }
 
                         if allow_in {
                             drop(m);
@@ -279,11 +287,14 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
                 bytes_since_metric += byte_len;
                 cells_since_metric += dirty_count;
 
-                // 7. Send to Relay
+                // 7. Send to Relay with RTT latency timing
+                let send_start = Instant::now();
                 match current_client.send_screen(is_bin, &payload, grid_cfg.name, grid_cfg.cell_width, effective_quality, compression_method, dynamic_quality) {
                     Ok(_) => {
+                        let rtt = send_start.elapsed().as_millis().clamp(1, 9999) as u32;
                         let mut m = state.metrics.lock().unwrap();
                         m.is_connected = true;
+                        m.rtt_latency_ms = rtt;
                         m.last_seen_status = format!("Transmitted {} cells ({} bytes) [{}]", dirty_count, byte_len, if is_bin { "BINARY" } else { "JSON" });
                         m.total_cells_updated += dirty_count as u64;
                         m.total_bytes_sent += byte_len as u64;
@@ -299,8 +310,16 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
             // Update rolling metrics every 1000ms
             if last_metric_time.elapsed() >= Duration::from_millis(1000) {
                 let elapsed_secs = last_metric_time.elapsed().as_secs_f32();
+                let kb_s = (bytes_since_metric as f32 / 1024.0) / elapsed_secs;
                 let mut m = state.metrics.lock().unwrap();
-                m.current_kb_per_sec = (bytes_since_metric as f32 / 1024.0) / elapsed_secs;
+                m.current_kb_per_sec = kb_s;
+                if kb_s > m.peak_bandwidth_kbps {
+                    m.peak_bandwidth_kbps = kb_s;
+                }
+                if m.bandwidth_history.len() >= 60 {
+                    m.bandwidth_history.remove(0);
+                }
+                m.bandwidth_history.push(kb_s);
                 m.dirty_cells_per_sec = (cells_since_metric as f32 / elapsed_secs) as u32;
                 m.total_frames_captured += 1;
                 m.recent_dirty_cells_count = dirty_count;

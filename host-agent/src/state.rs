@@ -37,6 +37,8 @@ pub struct HostSettings {
     pub compression_method: i32,
     #[serde(default = "default_dynamic_quality")]
     pub dynamic_quality: bool,
+    #[serde(default)]
+    pub show_token: bool,
 }
 
 impl HostSettings {
@@ -58,9 +60,9 @@ impl HostSettings {
 
     pub fn compression_label(&self) -> &str {
         match self.compression_method {
-            4 => "Low Compression (Fastest, 4)",
-            6 => "High Compression (Smallest, 6)",
-            _ => "Normal Compression (Balanced, 5)",
+            4 => "Level 4 (Fastest, Low Compression)",
+            6 => "Level 6 (Max Compression)",
+            _ => "Level 5 (Normal Compression / Balanced)",
         }
     }
 
@@ -88,12 +90,17 @@ pub struct LiveMetrics {
     pub is_connected: bool,
     pub last_seen_status: String,
     pub current_kb_per_sec: f32,
+    pub peak_bandwidth_kbps: f32,
     pub dirty_cells_per_sec: u32,
     pub total_cells_updated: u64,
     pub total_bytes_sent: u64,
     pub total_frames_captured: u64,
     pub last_input_event: String,
+    pub last_input_seq: u64,
     pub recent_dirty_cells_count: usize,
+    pub rtt_latency_ms: u32,
+    pub bandwidth_history: Vec<f32>,
+    pub relay_test_status: Option<String>,
 }
 
 pub struct HostSharedState {
@@ -127,6 +134,7 @@ impl HostSharedState {
             cell_size: 40,
             compression_method: 5,
             dynamic_quality: true,
+            show_token: false,
         };
         let active = if use_saved_settings {
             HostSettings::load_or_default(initial)
@@ -142,12 +150,17 @@ impl HostSharedState {
                 is_connected: false,
                 last_seen_status: "Initializing...".to_string(),
                 current_kb_per_sec: 0.0,
+                peak_bandwidth_kbps: 0.0,
                 dirty_cells_per_sec: 0,
                 total_cells_updated: 0,
                 total_bytes_sent: 0,
                 total_frames_captured: 0,
                 last_input_event: "None".to_string(),
+                last_input_seq: 0,
                 recent_dirty_cells_count: 0,
+                rtt_latency_ms: 14,
+                bandwidth_history: vec![0.0; 60],
+                relay_test_status: None,
             }),
         })
     }
