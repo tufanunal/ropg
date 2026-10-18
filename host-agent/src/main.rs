@@ -81,8 +81,9 @@ fn main() -> eframe::Result {
     let native_options = eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder::default()
             .with_title("ROGP Host Agent v1.2.0 - FHD Grid Diffing Engine")
-            .with_inner_size([1200.0, 720.0])
-            .with_min_inner_size([1040.0, 640.0]),
+            .with_inner_size([1600.0, 900.0])
+            .with_min_inner_size([1400.0, 850.0])
+            .with_resizable(true),
         ..Default::default()
     };
 
