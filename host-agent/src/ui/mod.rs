@@ -25,16 +25,16 @@ impl eframe::App for RogpHostApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         ui.ctx().request_repaint_after(Duration::from_millis(150));
 
-        ui.spacing_mut().item_spacing = egui::vec2(10.0, 8.0);
+        ui.spacing_mut().item_spacing = egui::vec2(8.0, 4.0);
 
         header::render_top_bar(ui);
-        ui.add_space(4.0);
+        ui.add_space(3.0);
 
         header::render_hero_status(ui, &self.state);
-        ui.add_space(8.0);
+        ui.add_space(5.0);
 
         telemetry::render_telemetry_card(ui, &self.state);
-        ui.add_space(8.0);
+        ui.add_space(5.0);
 
         // Two-column split layout for Encoding Engine and Relay Connection Panels
         ui.columns(2, |columns| {

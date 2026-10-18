@@ -74,8 +74,8 @@ pub fn render_hero_status(ui: &mut Ui, state: &Arc<HostSharedState>) {
                 "STREAMING PAUSED"
             };
 
-            // Left Section: Status & Relay URL stacked in 2 lines (fixed width 320px)
-            ui.allocate_ui(vec2(320.0, 36.0), |ui| {
+            // Left Section: Status & Relay URL stacked in 2 lines (compact 260px)
+            ui.allocate_ui(vec2(260.0, 36.0), |ui| {
                 ui.horizontal(|ui| {
                     render_dot(ui, status_color);
                     ui.add_space(4.0);
@@ -83,25 +83,25 @@ pub fn render_hero_status(ui: &mut Ui, state: &Arc<HostSharedState>) {
                         RichText::new(status_text)
                             .color(status_color)
                             .strong()
-                            .size(13.0),
+                            .size(12.5),
                     );
                 });
                 ui.label(
                     RichText::new(format!("Relay: {} (Connected - {}ms)", relay_url, rtt_ms))
                         .color(COLOR_TEXT_MUTED)
-                        .size(10.5),
+                        .size(10.0),
                 );
             });
 
-            ui.add_space(16.0);
+            ui.add_space(10.0);
 
-            // Middle Section: 4 Stat Pills (fills center area)
+            // Middle Section: 4 Stat Pills
             render_stat_pill(ui, "UPLOADING", &format!("{:.1} KB/s", kb_s), COLOR_ACCENT_CYAN);
-            ui.add_space(10.0);
+            ui.add_space(6.0);
             render_stat_pill(ui, "DIRTY RATE", &format!("{} cells/s", cells_s), COLOR_ACCENT_BLUE);
-            ui.add_space(10.0);
+            ui.add_space(6.0);
             render_stat_pill(ui, "TOTAL TRANSFERRED", &format!("{:.2} MB", total_mb), COLOR_TEXT_PRIMARY);
-            ui.add_space(10.0);
+            ui.add_space(6.0);
             render_stat_pill(
                 ui,
                 "GRID RESOLUTION",

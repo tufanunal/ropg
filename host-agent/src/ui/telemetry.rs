@@ -52,28 +52,29 @@ pub fn render_telemetry_card(ui: &mut Ui, state: &Arc<HostSharedState>) {
         ui.add_space(6.0);
 
         ui.horizontal(|ui| {
-            let spark_w = 600.0f32;
-            let stats_w = (ui.available_width() - spark_w - 20.0).max(850.0);
+            let total_w = ui.available_width();
+            let spark_w = (total_w * 0.40).clamp(280.0, 480.0);
+            let stats_w = total_w - spark_w - 14.0;
 
             // Left Grid: Sparkline graph
-            ui.allocate_ui(vec2(spark_w, 115.0), |ui| {
+            ui.allocate_ui(vec2(spark_w, 110.0), |ui| {
                 ui.label(
                     RichText::new("Upload Bandwidth History (KB/s)")
                         .color(COLOR_TEXT_MUTED)
                         .size(10.0),
                 );
                 ui.add_space(2.0);
-                render_sparkline(ui, &history, kb_s, peak_kb_s, spark_w, 95.0);
+                render_sparkline(ui, &history, kb_s, peak_kb_s, spark_w, 90.0);
             });
 
-            ui.add_space(16.0);
+            ui.add_space(10.0);
 
             // Right Grid: 6 Metric Stat Boxes in 3 columns x 2 rows
-            let box_width = ((stats_w - 24.0) / 3.0).floor().max(260.0);
-            ui.allocate_ui(vec2(stats_w, 115.0), |ui| {
+            let box_width = ((stats_w - 20.0) / 3.0).floor();
+            ui.allocate_ui(vec2(stats_w, 110.0), |ui| {
                 Grid::new("telemetry_grid_boxes")
                     .num_columns(3)
-                    .spacing([10.0, 8.0])
+                    .spacing([8.0, 8.0])
                     .show(ui, |ui| {
                         render_stat_box(
                             ui,

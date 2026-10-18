@@ -15,6 +15,7 @@ pub const COLOR_TEXT_PRIMARY: Color32 = Color32::from_rgb(240, 244, 248);
 pub const COLOR_TEXT_MUTED: Color32 = Color32::from_rgb(139, 155, 180);
 
 pub fn setup_custom_theme(ctx: &Context) {
+    ctx.set_zoom_factor(1.0);
     let mut visuals = Visuals::dark();
 
     visuals.override_text_color = Some(COLOR_TEXT_PRIMARY);
