@@ -73,6 +73,7 @@ pub struct GridDiffTracker {
     cell_hashes: Vec<u64>,
     cell_versions: Vec<u32>,
     first_frame: bool,
+    prev_frame: Vec<u8>,
 }
 
 impl GridDiffTracker {
@@ -84,6 +85,7 @@ impl GridDiffTracker {
             cell_versions: vec![0; config.total_cells],
             config,
             first_frame: true,
+            prev_frame: Vec::new(),
         }
     }
 
@@ -94,6 +96,7 @@ impl GridDiffTracker {
             cell_versions: vec![0; config.total_cells],
             config,
             first_frame: true,
+            prev_frame: Vec::new(),
         }
     }
 
@@ -104,6 +107,7 @@ impl GridDiffTracker {
             self.cell_hashes = vec![0; new_config.total_cells];
             self.cell_versions = vec![0; new_config.total_cells];
             self.first_frame = true;
+            self.prev_frame.clear();
         }
     }
 
@@ -115,11 +119,12 @@ impl GridDiffTracker {
             self.cell_hashes = vec![0; new_config.total_cells];
             self.cell_versions = vec![0; new_config.total_cells];
             self.first_frame = true;
+            self.prev_frame.clear();
         }
     }
 
-    /// Fast 64-bit FNV-1a hash of a pixel RGBA chunk
-    fn hash_cell(frame: &[u8], start_x: usize, start_y: usize, stride: usize, cell_w: usize, cell_h: usize) -> u64 {
+    /// Fast 64-bit word chunk hash of a pixel RGBA chunk
+    pub fn hash_cell(frame: &[u8], start_x: usize, start_y: usize, stride: usize, cell_w: usize, cell_h: usize) -> u64 {
         const FNV_OFFSET_BASIS: u64 = 0xcbf29ce484222325;
         const FNV_PRIME: u64 = 0x100000001b3;
 
@@ -128,12 +133,40 @@ impl GridDiffTracker {
         for y in 0..cell_h {
             let row_offset = (start_y + y) * stride + (start_x * 4);
             let row_slice = &frame[row_offset..row_offset + (cell_w * 4)];
-            for &byte in row_slice {
+
+            // Process in 8-byte chunks (SIMD/word level)
+            let mut chunks = row_slice.chunks_exact(8);
+            for chunk in chunks.by_ref() {
+                let val = u64::from_ne_bytes(chunk.try_into().unwrap());
+                hash ^= val;
+                hash = hash.wrapping_mul(FNV_PRIME);
+            }
+            // Remainder bytes
+            for &byte in chunks.remainder() {
                 hash ^= byte as u64;
                 hash = hash.wrapping_mul(FNV_PRIME);
             }
         }
         hash
+    }
+
+    /// Fast early-exit comparison of a cell against the previous frame.
+    /// Returns true if all pixels match exactly (memcmp SIMD equality).
+    fn is_cell_unchanged(&self, frame: &[u8], start_x: usize, start_y: usize, stride: usize, cell_w: usize, cell_h: usize) -> bool {
+        if self.prev_frame.len() != frame.len() {
+            return false;
+        }
+
+        let bytes_per_row = cell_w * 4;
+        for y in 0..cell_h {
+            let row_offset = (start_y + y) * stride + (start_x * 4);
+            let curr_row = &frame[row_offset..row_offset + bytes_per_row];
+            let prev_row = &self.prev_frame[row_offset..row_offset + bytes_per_row];
+            if curr_row != prev_row {
+                return false;
+            }
+        }
+        true
     }
 
     /// Extracts RGBA pixels for a single cell into a contiguous buffer
@@ -150,7 +183,7 @@ impl GridDiffTracker {
     /// Diffs the current 1920x1080 RGBA frame against the previous frame.
     /// Returns only dirty cells (or all cells if force_full_sync is true).
     pub fn diff_frame(&mut self, frame: &[u8], force_full_sync: bool) -> (Vec<DirtyCell>, bool) {
-        let is_full = force_full_sync || self.first_frame;
+        let is_full = force_full_sync || self.first_frame || self.prev_frame.len() != frame.len();
         self.first_frame = false;
 
         let stride = SCREEN_WIDTH * 4;
@@ -165,6 +198,11 @@ impl GridDiffTracker {
             for c in 0..cols {
                 let start_x = c * cell_w;
                 let cell_idx = r * cols + c;
+
+                // Early exit: if not full sync, check SIMD equality against previous frame
+                if !is_full && self.is_cell_unchanged(frame, start_x, start_y, stride, cell_w, cell_h) {
+                    continue;
+                }
 
                 let h = Self::hash_cell(frame, start_x, start_y, stride, cell_w, cell_h);
                 if is_full || h != self.cell_hashes[cell_idx] {
@@ -181,6 +219,13 @@ impl GridDiffTracker {
                     });
                 }
             }
+        }
+
+        // Cache previous frame for fast SIMD comparison in the next iteration
+        if self.prev_frame.len() == frame.len() {
+            self.prev_frame.copy_from_slice(frame);
+        } else {
+            self.prev_frame = frame.to_vec();
         }
 
         (dirty_cells, is_full)
