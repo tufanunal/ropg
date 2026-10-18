@@ -19,7 +19,8 @@ pub struct HostConfig {
     pub grayscale: Option<bool>,
     pub interval_ms: Option<u64>,
     pub is_running: Option<bool>,
-    pub cell_size: Option<usize>,
+    pub cell_size: Option<serde_json::Value>,
+    pub grid_size: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -53,7 +54,7 @@ impl RelayClient {
     }
 
     /// POST /api/host/:host_id/screen
-    pub fn send_screen(&self, is_binary: bool, payload: &[u8], cell_size: usize, quality: u8) -> Result<bool, String> {
+    pub fn send_screen(&self, is_binary: bool, payload: &[u8], grid_preset: &str, cell_size: usize, quality: u8) -> Result<bool, String> {
         let url = format!("{}/api/host/{}/screen", self.relay_url, self.host_id);
 
         let mut headers = HeaderMap::new();
@@ -65,6 +66,9 @@ impl RelayClient {
             headers.insert("X-Payload-Mode", HeaderValue::from_static("json"));
         }
 
+        if let Ok(val) = HeaderValue::from_str(grid_preset) {
+            headers.insert("X-Grid-Size", val);
+        }
         if let Ok(val) = HeaderValue::from_str(&cell_size.to_string()) {
             headers.insert("X-Cell-Size", val);
         }

@@ -132,10 +132,10 @@ class RogpViewerApp {
     if (gridSizeSelect) {
       gridSizeSelect.addEventListener('change', async () => {
         this.lastGridUserChangeTime = Date.now();
-        const cellSize = parseInt(gridSizeSelect.value, 10);
-        this.canvasEngine.setGridSize(cellSize);
+        const preset = gridSizeSelect.value;
+        this.canvasEngine.setGridPreset(preset);
         gridSizeSelect.blur();
-        await this.sendConfig({ cell_size: cellSize });
+        await this.sendConfig({ grid_size: preset, cell_size: this.canvasEngine.cellWidth });
       });
     }
 
@@ -381,14 +381,14 @@ class RogpViewerApp {
       }
 
       // Synchronize Grid Size from Host (2-way sync)
-      const cellSizeHeader = res.headers.get('x-cell-size');
-      if (cellSizeHeader && (!this.lastGridUserChangeTime || Date.now() - this.lastGridUserChangeTime > 2500)) {
-        const cs = parseInt(cellSizeHeader, 10);
-        if (cs && cs !== this.canvasEngine.cellSize) {
-          this.canvasEngine.setGridSize(cs);
+      const gridHeader = res.headers.get('x-grid-size') || res.headers.get('x-cell-size');
+      if (gridHeader && (!this.lastGridUserChangeTime || Date.now() - this.lastGridUserChangeTime > 2500)) {
+        const norm = this.normalizeGridPreset(gridHeader);
+        if (norm && norm !== this.canvasEngine.gridPreset) {
+          this.canvasEngine.setGridPreset(norm);
           const gridSelect = document.getElementById('grid-size-select');
-          if (gridSelect && gridSelect.value !== String(cs)) {
-            gridSelect.value = String(cs);
+          if (gridSelect && gridSelect.value !== norm) {
+            gridSelect.value = norm;
           }
         }
       }
@@ -510,6 +510,17 @@ class RogpViewerApp {
     } catch (err) {
       console.warn('Failed to send config to host:', err);
     }
+  }
+
+  normalizeGridPreset(val) {
+    const s = String(val || '').toLowerCase();
+    if (s === '60' || s === '60x60') return '60x60';
+    if (s === '120' || s === '120x120') return '120x120';
+    if (s === '160' || s === '160x180') return '160x180';
+    if (s === '240' || s === '240x270') return '240x270';
+    if (s === '384' || s === '284' || s === '384x360' || s === '284x360') return '384x360';
+    if (s === '640' || s === '640x540') return '640x540';
+    return '40x40';
   }
 }
 

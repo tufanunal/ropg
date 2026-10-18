@@ -163,8 +163,8 @@ const server = http.createServer(async (req, res) => {
   // Common CORS and security headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Rogp-Token, X-Payload-Mode, X-Cell-Size, X-Quality');
-  res.setHeader('Access-Control-Expose-Headers', 'X-Payload-Mode, X-Screen-Timestamp, X-Host-Broadcasting, X-Cell-Size, X-Quality');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Rogp-Token, X-Payload-Mode, X-Cell-Size, X-Grid-Size, X-Quality');
+  res.setHeader('Access-Control-Expose-Headers', 'X-Payload-Mode, X-Screen-Timestamp, X-Host-Broadcasting, X-Cell-Size, X-Grid-Size, X-Quality');
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
@@ -185,6 +185,9 @@ const server = http.createServer(async (req, res) => {
       const contentType = req.headers['content-type'] || '';
       const isBinary = contentType.includes('application/octet-stream') || req.headers['x-payload-mode'] === 'binary';
 
+      if (req.headers['x-grid-size']) {
+        host.gridSize = req.headers['x-grid-size'];
+      }
       if (req.headers['x-cell-size']) {
         host.cellSize = parseInt(req.headers['x-cell-size'], 10);
       }
@@ -242,6 +245,7 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(204, {
           'X-Host-Broadcasting': host.isBroadcasting ? 'true' : 'false',
           'X-Cell-Size': String(host.cellSize || 40),
+          'X-Grid-Size': String(host.gridSize || host.cellSize || '40x40'),
           'X-Quality': String(host.quality || 80)
         });
         res.end();
@@ -255,6 +259,7 @@ const server = http.createServer(async (req, res) => {
           'X-Screen-Timestamp': String(screen.timestamp),
           'X-Host-Broadcasting': host.isBroadcasting ? 'true' : 'false',
           'X-Cell-Size': String(host.cellSize || 40),
+          'X-Grid-Size': String(host.gridSize || host.cellSize || '40x40'),
           'X-Quality': String(host.quality || 80)
         });
         res.end(screen.data);
@@ -265,6 +270,7 @@ const server = http.createServer(async (req, res) => {
           'X-Screen-Timestamp': String(screen.timestamp),
           'X-Host-Broadcasting': host.isBroadcasting ? 'true' : 'false',
           'X-Cell-Size': String(host.cellSize || 40),
+          'X-Grid-Size': String(host.gridSize || host.cellSize || '40x40'),
           'X-Quality': String(host.quality || 80)
         });
         res.end(JSON.stringify(screen.data));
@@ -347,7 +353,10 @@ const server = http.createServer(async (req, res) => {
         if (typeof cfg.quality === 'number') {
           host.quality = cfg.quality;
         }
-        if (typeof cfg.cell_size === 'number') {
+        if (typeof cfg.grid_size === 'string') {
+          host.gridSize = cfg.grid_size;
+        }
+        if (typeof cfg.cell_size === 'number' || typeof cfg.cell_size === 'string') {
           host.cellSize = cfg.cell_size;
         }
         // Trigger full sync on mode, quality, or grid size change

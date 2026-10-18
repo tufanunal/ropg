@@ -14,8 +14,8 @@ use crate::state::HostSharedState;
 pub fn start_worker_thread(state: Arc<HostSharedState>) {
     std::thread::spawn(move || {
         let mut capture = ScreenCapture::new();
-        let initial_cs = { state.settings.lock().unwrap().cell_size };
-        let mut diff_tracker = GridDiffTracker::new(initial_cs);
+        let initial_preset = { state.settings.lock().unwrap().grid_size.clone() };
+        let mut diff_tracker = GridDiffTracker::new_with_preset(&initial_preset);
         let mut input_dispatcher = InputDispatcher::new();
 
         let mut last_metric_time = Instant::now();
@@ -71,6 +71,27 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
                         if let Some(q) = cfg.quality {
                             s.quality = q;
                         }
+                        if let Some(grid_val) = cfg.grid_size.as_ref() {
+                            let new_cfg = crate::grid::GridConfig::from_preset(grid_val);
+                            if s.grid_size != new_cfg.name {
+                                s.grid_size = new_cfg.name.to_string();
+                                s.cell_size = new_cfg.cell_width;
+                                println!("[Config] Viewer switched grid to: {} ({}x{} cells)", new_cfg.name, new_cfg.cols, new_cfg.rows);
+                                state.force_full_sync.store(true, Ordering::Relaxed);
+                            }
+                        } else if let Some(cs_val) = cfg.cell_size {
+                            let parsed = match cs_val {
+                                serde_json::Value::Number(n) => crate::grid::GridConfig::from_cell_size(n.as_u64().unwrap_or(40) as usize),
+                                serde_json::Value::String(ref str_val) => crate::grid::GridConfig::from_preset(str_val),
+                                _ => crate::grid::GridConfig::from_preset("40x40"),
+                            };
+                            if s.grid_size != parsed.name {
+                                s.grid_size = parsed.name.to_string();
+                                s.cell_size = parsed.cell_width;
+                                println!("[Config] Viewer switched grid to: {} ({}x{} cells)", parsed.name, parsed.cols, parsed.rows);
+                                state.force_full_sync.store(true, Ordering::Relaxed);
+                            }
+                        }
                         if let Some(g) = cfg.grayscale {
                             s.grayscale = g;
                         }
@@ -104,10 +125,24 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
                             s.quality = q;
                             println!("[Config] Viewer updated WebP quality to: {}%", q);
                         }
-                        if let Some(cs) = cfg.cell_size {
-                            if (cs == 40 || cs == 60 || cs == 120) && s.cell_size != cs {
-                                s.cell_size = cs;
-                                println!("[Config] Viewer switched grid size to: {}px", cs);
+                        if let Some(grid_val) = cfg.grid_size.as_ref() {
+                            let new_cfg = crate::grid::GridConfig::from_preset(grid_val);
+                            if s.grid_size != new_cfg.name {
+                                s.grid_size = new_cfg.name.to_string();
+                                s.cell_size = new_cfg.cell_width;
+                                println!("[Config] Viewer switched grid to: {} ({}x{} cells)", new_cfg.name, new_cfg.cols, new_cfg.rows);
+                                state.force_full_sync.store(true, Ordering::Relaxed);
+                            }
+                        } else if let Some(cs_val) = cfg.cell_size {
+                            let parsed = match cs_val {
+                                serde_json::Value::Number(n) => crate::grid::GridConfig::from_cell_size(n.as_u64().unwrap_or(40) as usize),
+                                serde_json::Value::String(ref str_val) => crate::grid::GridConfig::from_preset(str_val),
+                                _ => crate::grid::GridConfig::from_preset("40x40"),
+                            };
+                            if s.grid_size != parsed.name {
+                                s.grid_size = parsed.name.to_string();
+                                s.cell_size = parsed.cell_width;
+                                println!("[Config] Viewer switched grid to: {} ({}x{} cells)", parsed.name, parsed.cols, parsed.rows);
                                 state.force_full_sync.store(true, Ordering::Relaxed);
                             }
                         }
@@ -139,20 +174,20 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
             }
 
             // 2. Read dynamic streaming settings after config application
-            let (is_binary_mode, quality, grayscale, interval_ms, cell_size) = {
+            let (is_binary_mode, quality, grayscale, interval_ms, grid_cfg) = {
                 let s = state.settings.lock().unwrap();
                 (
                     s.is_binary_mode,
                     s.quality,
                     s.grayscale,
                     s.interval_ms,
-                    s.cell_size,
+                    s.get_grid_config(),
                 )
             };
 
             // Sync diff tracker grid size if changed
-            if diff_tracker.config.cell_size != cell_size {
-                diff_tracker.set_cell_size(cell_size);
+            if diff_tracker.config != grid_cfg {
+                diff_tracker.set_preset(grid_cfg.name);
             }
 
             let loop_start = Instant::now();
@@ -167,7 +202,7 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
 
             if !dirty_cells.is_empty() {
                 // 5. WebP encode
-                let encoder = CellEncoder::new(quality, grayscale, cell_size, cell_size);
+                let encoder = CellEncoder::new(quality, grayscale, grid_cfg.cell_width, grid_cfg.cell_height);
                 let mut encoded_cells = Vec::with_capacity(dirty_cells.len());
 
                 for dc in &dirty_cells {
@@ -194,7 +229,7 @@ pub fn start_worker_thread(state: Arc<HostSharedState>) {
                 cells_since_metric += dirty_count;
 
                 // 7. Send to Relay
-                match current_client.send_screen(is_bin, &payload, cell_size, quality) {
+                match current_client.send_screen(is_bin, &payload, grid_cfg.name, grid_cfg.cell_width, quality) {
                     Ok(_) => {
                         let mut m = state.metrics.lock().unwrap();
                         m.is_connected = true;

@@ -19,6 +19,7 @@ export class ScreenCanvas {
       this.overlayCanvas.height = SCREEN_HEIGHT;
     }
 
+    this.gridPreset = '40x40';
     this.cellSize = 40;
     this.cellWidth = 40;
     this.cellHeight = 40;
@@ -35,18 +36,43 @@ export class ScreenCanvas {
     this.clear();
   }
 
-  setGridSize(size) {
-    const s = parseInt(size, 10) || 40;
-    if (this.cellSize === s) return;
-    this.cellSize = s;
-    this.cellWidth = s;
-    this.cellHeight = s;
-    this.gridCols = Math.round(SCREEN_WIDTH / s);
-    this.gridRows = Math.round(SCREEN_HEIGHT / s);
+  setGridPreset(preset) {
+    const str = String(preset || '40x40').toLowerCase();
+    let w = 40, h = 40, cols = 48, rows = 27;
+
+    if (str === '60x60' || str === '60') {
+      w = 60; h = 60; cols = 32; rows = 18;
+    } else if (str === '120x120' || str === '120') {
+      w = 120; h = 120; cols = 16; rows = 9;
+    } else if (str === '160x180' || str === '160') {
+      w = 160; h = 180; cols = 12; rows = 6;
+    } else if (str === '240x270' || str === '240') {
+      w = 240; h = 270; cols = 8; rows = 4;
+    } else if (str === '384x360' || str === '284x360' || str === '384' || str === '284') {
+      w = 384; h = 360; cols = 5; rows = 3;
+    } else if (str === '640x540' || str === '640') {
+      w = 640; h = 540; cols = 3; rows = 2;
+    } else {
+      w = 40; h = 40; cols = 48; rows = 27;
+    }
+
+    const presetName = `${w}x${h}`;
+    if (this.gridPreset === presetName) return;
+
+    this.gridPreset = presetName;
+    this.cellSize = w;
+    this.cellWidth = w;
+    this.cellHeight = h;
+    this.gridCols = cols;
+    this.gridRows = rows;
     this.cellVersions.clear();
     if (this.showGrid) {
       this.renderGridOverlay();
     }
+  }
+
+  setGridSize(size) {
+    this.setGridPreset(size);
   }
 
   clear() {

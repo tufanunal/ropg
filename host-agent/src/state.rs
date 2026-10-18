@@ -3,6 +3,10 @@ use std::sync::{Arc, Mutex};
 use serde::{Deserialize, Serialize};
 use std::fs;
 
+fn default_grid_size() -> String {
+    "40x40".to_string()
+}
+
 fn default_cell_size() -> usize {
     40
 }
@@ -17,11 +21,29 @@ pub struct HostSettings {
     pub grayscale: bool,
     pub interval_ms: u64,
     pub allow_input: bool,
+    #[serde(default = "default_grid_size")]
+    pub grid_size: String,
     #[serde(default = "default_cell_size")]
     pub cell_size: usize,
 }
 
 impl HostSettings {
+    pub fn get_grid_config(&self) -> crate::grid::GridConfig {
+        crate::grid::GridConfig::from_preset(&self.grid_size)
+    }
+
+    pub fn grid_size_label(&self) -> &str {
+        match self.grid_size.as_str() {
+            "60x60" | "60" => "60x60 (32x18, 576 cells)",
+            "120x120" | "120" => "120x120 (16x9, 144 cells)",
+            "160x180" | "160" => "160x180 (12x6, 72 cells)",
+            "240x270" | "240" => "240x270 (8x4, 32 cells)",
+            "384x360" | "284x360" | "384" | "284" => "384x360 (5x3, 15 cells)",
+            "640x540" | "640" => "640x540 (3x2, 6 cells)",
+            _ => "40x40 (48x27, 1296 cells)",
+        }
+    }
+
     pub fn save(&self) {
         if let Ok(json) = serde_json::to_string_pretty(self) {
             let _ = fs::write("rogp_settings.json", json);
@@ -30,7 +52,11 @@ impl HostSettings {
 
     pub fn load_or_default(default_settings: HostSettings) -> Self {
         if let Ok(data) = fs::read_to_string("rogp_settings.json") {
-            if let Ok(loaded) = serde_json::from_str::<HostSettings>(&data) {
+            if let Ok(mut loaded) = serde_json::from_str::<HostSettings>(&data) {
+                // Ensure grid_size is synced if loaded from older config
+                if loaded.grid_size.is_empty() {
+                    loaded.grid_size = crate::grid::GridConfig::from_cell_size(loaded.cell_size).name.to_string();
+                }
                 return loaded;
             }
         }
@@ -76,6 +102,7 @@ impl HostSharedState {
             grayscale,
             interval_ms,
             allow_input: true,
+            grid_size: "40x40".to_string(),
             cell_size: 40,
         };
         let active = HostSettings::load_or_default(initial);

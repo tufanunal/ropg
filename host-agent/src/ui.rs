@@ -126,8 +126,7 @@ impl eframe::App for RogpHostApp {
                     ui.label(egui::RichText::new("Total Sent:").color(egui::Color32::GRAY));
                     ui.label(egui::RichText::new(format!("{:.2} MB", total_mb)).strong());
 
-                    let current_cs = { self.state.settings.lock().unwrap().cell_size };
-                    let grid_cfg = crate::grid::GridConfig::from_cell_size(current_cs);
+                    let grid_cfg = { self.state.settings.lock().unwrap().get_grid_config() };
                     ui.label(egui::RichText::new("Grid Slices:").color(egui::Color32::GRAY));
                     ui.label(egui::RichText::new(format!("{}x{} ({} cells)", grid_cfg.cols, grid_cfg.rows, grid_cfg.total_cells)).strong());
                     ui.end_row();
@@ -184,11 +183,22 @@ impl eframe::App for RogpHostApp {
 
                 ui.horizontal(|ui| {
                     ui.label("Grid Resolution:");
-                    let prev_cs = s.cell_size;
-                    ui.radio_value(&mut s.cell_size, 40, "40px (48x27)");
-                    ui.radio_value(&mut s.cell_size, 60, "60px (32x18)");
-                    ui.radio_value(&mut s.cell_size, 120, "120px (16x9)");
-                    if s.cell_size != prev_cs {
+                    let prev_grid = s.grid_size.clone();
+                    egui::ComboBox::from_id_salt("grid_res_combo")
+                        .selected_text(s.grid_size_label())
+                        .width(220.0)
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(&mut s.grid_size, "40x40".to_string(), "40x40 (48x27, 1296 cells)");
+                            ui.selectable_value(&mut s.grid_size, "60x60".to_string(), "60x60 (32x18, 576 cells)");
+                            ui.selectable_value(&mut s.grid_size, "120x120".to_string(), "120x120 (16x9, 144 cells)");
+                            ui.selectable_value(&mut s.grid_size, "160x180".to_string(), "160x180 (12x6, 72 cells)");
+                            ui.selectable_value(&mut s.grid_size, "240x270".to_string(), "240x270 (8x4, 32 cells)");
+                            ui.selectable_value(&mut s.grid_size, "384x360".to_string(), "384x360 (5x3, 15 cells)");
+                            ui.selectable_value(&mut s.grid_size, "640x540".to_string(), "640x540 (3x2, 6 cells)");
+                        });
+
+                    if s.grid_size != prev_grid {
+                        s.cell_size = s.get_grid_config().cell_width;
                         self.state.force_full_sync.store(true, Ordering::Relaxed);
                     }
                 });
@@ -218,7 +228,7 @@ impl eframe::App for RogpHostApp {
                 });
 
                 ui.add_space(6.0);
-                let total = crate::grid::GridConfig::from_cell_size(s.cell_size).total_cells;
+                let total = s.get_grid_config().total_cells;
                 if ui.button(egui::RichText::new(format!("🔄 Force Full Screen Sync (All {} Cells)", total)).strong()).clicked() {
                     self.state.force_full_sync.store(true, Ordering::Relaxed);
                 }

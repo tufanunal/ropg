@@ -74,18 +74,19 @@ async function runTest() {
 
   // Test Mode A JSON format directly via Relay
   console.log('--- [4b/6] Verifying JSON Mode A Ingestion & Fetch ---');
+  const JSON_HOST_ID = 'test-host-json-direct';
   const testJsonPayload = {
-    host_id: HOST_ID,
+    host_id: JSON_HOST_ID,
     full_sync: false,
     timestamp: Date.now(),
     cells: [{ id: 'C17', v: 99, data: 'UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4H' }]
   };
-  await fetch(`${RELAY_URL}/api/host/${HOST_ID}/screen`, {
+  await fetch(`${RELAY_URL}/api/host/${JSON_HOST_ID}/screen`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Payload-Mode': 'json' },
     body: JSON.stringify(testJsonPayload)
   });
-  const jsonScreenRes = await fetch(`${RELAY_URL}/api/viewer/${HOST_ID}/screen`);
+  const jsonScreenRes = await fetch(`${RELAY_URL}/api/viewer/${JSON_HOST_ID}/screen`);
   assert.strictEqual(jsonScreenRes.headers.get('x-payload-mode'), 'json');
   const jsonScreenData = await jsonScreenRes.json();
   assert.strictEqual(jsonScreenData.cells[0].id, 'C17');
@@ -93,22 +94,24 @@ async function runTest() {
   console.log('JSON Mode A ingestion and viewer retrieval verified successfully.');
 
   console.log('--- [5/6] Verifying Config Switch (Viewer -> Host) ---');
-  // Viewer commands Host to switch from Binary to Mode A (JSON)
-  console.log('Viewer sending config: switch to Mode A (JSON)...');
+  // Viewer commands Host to switch from Binary to Mode A (JSON) and grid size 160x180
+  console.log('Viewer sending config: switch to Mode A (JSON) and Grid 160x180...');
   const cfgRes = await fetch(`${RELAY_URL}/api/viewer/${HOST_ID}/config`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ mode: 'json', quality: 75 })
+    body: JSON.stringify({ mode: 'json', quality: 75, grid_size: '160x180' })
   });
   assert.strictEqual(cfgRes.status, 200);
 
-  // Wait for Host to poll and adopt Mode A
+  // Wait for Host to poll and adopt Mode A and 160x180 grid
   await sleep(1500);
 
   const switchedScreenRes = await fetch(`${RELAY_URL}/api/viewer/${HOST_ID}/screen`);
   console.log('Host responded in Mode:', switchedScreenRes.headers.get('x-payload-mode'));
+  console.log('Host responded with X-Grid-Size:', switchedScreenRes.headers.get('x-grid-size'));
   assert.strictEqual(switchedScreenRes.headers.get('x-payload-mode'), 'json');
-  console.log('Verified Host adopted Mode A (JSON) commanded by Viewer!');
+  assert.strictEqual(switchedScreenRes.headers.get('x-grid-size'), '160x180');
+  console.log('Verified Host adopted Mode A (JSON) and 160x180 Grid commanded by Viewer!');
 
   console.log('--- [5b/8] Verifying Broadcast Pause & Resume ---');
   // Viewer commands Host to pause broadcasting
