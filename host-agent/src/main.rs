@@ -77,13 +77,17 @@ fn main() -> eframe::Result {
         }
     }
 
+    // Force winit X11 scale factor to 1.0 so 1600x900 is strictly physical pixels
+    std::env::set_var("WINIT_X11_SCALE_FACTOR", "1.0");
+
     // Launch Native Linux (Debian 12) GUI
     let native_options = eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder::default()
             .with_title("ROGP Host Agent v1.2.0 - FHD Grid Diffing Engine")
-            .with_inner_size([1170.0, 650.0])
-            .with_min_inner_size([1000.0, 580.0])
-            .with_resizable(true),
+            .with_inner_size([1600.0, 900.0])
+            .with_min_inner_size([1600.0, 900.0])
+            .with_max_inner_size([1600.0, 900.0])
+            .with_resizable(false),
         ..Default::default()
     };
 
