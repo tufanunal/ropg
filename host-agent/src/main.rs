@@ -86,9 +86,9 @@ fn main() -> eframe::Result {
     let mut viewport = eframe::egui::ViewportBuilder::default()
         .with_title("ROGP Host Agent - FHD Grid Diffing Engine")
         .with_inner_size([1600.0, 900.0])
-        .with_min_inner_size([1600.0, 900.0])
-        .with_max_inner_size([1600.0, 900.0])
-        .with_resizable(false);
+        .with_min_inner_size([1280.0, 720.0])
+        .with_resizable(true)
+        .with_maximize_button(true);
 
     if let Some(icon) = icon_data {
         viewport = viewport.with_icon(icon);

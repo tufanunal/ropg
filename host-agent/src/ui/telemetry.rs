@@ -1,5 +1,5 @@
 use eframe::egui::{
-    epaint::PathShape, Color32, Grid, Pos2, RichText, Sense, Stroke, Ui, vec2,
+    epaint::PathShape, Color32, Pos2, RichText, Sense, Stroke, Ui, vec2,
 };
 use std::sync::Arc;
 
@@ -53,10 +53,9 @@ pub fn render_telemetry_card(ui: &mut Ui, state: &Arc<HostSharedState>) {
 
         ui.horizontal(|ui| {
             let total_w = ui.available_width();
-            let spark_w = (total_w * 0.35).clamp(260.0, 420.0);
-            let stats_w = total_w - spark_w - 20.0;
+            let spark_w = (total_w * 0.32).clamp(240.0, 420.0);
 
-            // Left Grid: Sparkline graph
+            // Left: Sparkline graph
             ui.allocate_ui(vec2(spark_w, 110.0), |ui| {
                 ui.label(
                     RichText::new("Upload Bandwidth History (KB/s)")
@@ -69,65 +68,61 @@ pub fn render_telemetry_card(ui: &mut Ui, state: &Arc<HostSharedState>) {
 
             ui.add_space(12.0);
 
-            // Right Grid: 6 Metric Stat Boxes in 3 columns x 2 rows
-            let box_outer_width = (((stats_w - 32.0) / 3.0).floor() - 8.0).max(160.0);
-            ui.allocate_ui(vec2(stats_w, 110.0), |ui| {
-                Grid::new("telemetry_grid_boxes")
-                    .num_columns(3)
-                    .spacing([8.0, 8.0])
-                    .show(ui, |ui| {
-                        render_stat_box(
-                            ui,
-                            box_outer_width,
-                            "Current Bandwidth",
-                            &format!("{:.1} KB/s", kb_s),
-                            &format!("Peak: {:.1} KB/s", peak_kb_s),
-                            COLOR_ACCENT_CYAN,
-                        );
-                        render_stat_box(
-                            ui,
-                            box_outer_width,
-                            "Grid Cell Updates",
-                            &format!("{} cells/s", cells_s),
-                            &format!("{:.1}% of total screen", dirty_percent),
-                            COLOR_ACCENT_BLUE,
-                        );
-                        render_stat_box(
-                            ui,
-                            box_outer_width,
-                            "Total Payload Sent",
-                            &format!("{:.2} MB", total_bytes as f64 / 1_048_576.0),
-                            &format!("{} bytes", total_bytes),
-                            COLOR_TEXT_PRIMARY,
-                        );
-                        ui.end_row();
+            // Right: 6 Metric Stat Boxes in 3 equal columns x 2 rows
+            ui.columns(3, |columns| {
+                columns[0].vertical(|ui| {
+                    render_stat_box(
+                        ui,
+                        "Current Bandwidth",
+                        &format!("{:.1} KB/s", kb_s),
+                        &format!("Peak: {:.1} KB/s", peak_kb_s),
+                        COLOR_ACCENT_CYAN,
+                    );
+                    ui.add_space(6.0);
+                    render_stat_box(
+                        ui,
+                        "Last Input Command",
+                        &last_input,
+                        &format!("seq: {}", last_seq),
+                        COLOR_ACCENT_GREEN,
+                    );
+                });
 
-                        render_stat_box(
-                            ui,
-                            box_outer_width,
-                            "Last Input Command",
-                            &last_input,
-                            &format!("seq: {}", last_seq),
-                            COLOR_ACCENT_GREEN,
-                        );
-                        render_stat_box(
-                            ui,
-                            box_outer_width,
-                            "Grid Partition",
-                            &format!("{} cells", grid_cfg.total_cells),
-                            &format!("{} cols x {} rows", grid_cfg.cols, grid_cfg.rows),
-                            COLOR_TEXT_PRIMARY,
-                        );
-                        render_stat_box(
-                            ui,
-                            box_outer_width,
-                            "Network Latency",
-                            &format!("{} ms", rtt_ms),
-                            "HTTP GET / POST RTT",
-                            COLOR_ACCENT_GREEN,
-                        );
-                        ui.end_row();
-                    });
+                columns[1].vertical(|ui| {
+                    render_stat_box(
+                        ui,
+                        "Grid Cell Updates",
+                        &format!("{} cells/s", cells_s),
+                        &format!("{:.1}% of screen", dirty_percent),
+                        COLOR_ACCENT_BLUE,
+                    );
+                    ui.add_space(6.0);
+                    render_stat_box(
+                        ui,
+                        "Grid Partition",
+                        &format!("{} cells", grid_cfg.total_cells),
+                        &format!("{} cols x {} rows", grid_cfg.cols, grid_cfg.rows),
+                        COLOR_TEXT_PRIMARY,
+                    );
+                });
+
+                columns[2].vertical(|ui| {
+                    render_stat_box(
+                        ui,
+                        "Total Payload Sent",
+                        &format!("{:.2} MB", total_bytes as f64 / 1_048_576.0),
+                        &format!("{} bytes", total_bytes),
+                        COLOR_TEXT_PRIMARY,
+                    );
+                    ui.add_space(6.0);
+                    render_stat_box(
+                        ui,
+                        "Network Latency",
+                        &format!("{} ms", rtt_ms),
+                        "HTTP RTT",
+                        COLOR_ACCENT_GREEN,
+                    );
+                });
             });
         });
     });
@@ -226,16 +221,13 @@ fn render_sparkline(ui: &mut Ui, history: &[f32], current_kb_s: f32, peak_kb_s: 
 
 fn render_stat_box(
     ui: &mut Ui,
-    box_outer_width: f32,
     title: &str,
     primary_val: &str,
     subtitle: &str,
     val_color: Color32,
 ) {
     inner_box_frame().show(ui, |ui| {
-        let content_w = (box_outer_width - 20.0).max(60.0);
-        ui.set_max_width(content_w);
-        ui.set_width(content_w);
+        ui.set_width(ui.available_width());
         ui.label(RichText::new(title).color(COLOR_TEXT_MUTED).size(9.5));
         ui.add_space(1.0);
         ui.label(
