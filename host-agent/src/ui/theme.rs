@@ -9,6 +9,7 @@ pub const COLOR_ACCENT_CYAN: Color32 = Color32::from_rgb(0, 240, 255);
 pub const COLOR_ACCENT_GREEN: Color32 = Color32::from_rgb(0, 255, 135);
 pub const COLOR_ACCENT_RED: Color32 = Color32::from_rgb(255, 51, 102);
 pub const COLOR_ACCENT_BLUE: Color32 = Color32::from_rgb(59, 130, 246);
+pub const COLOR_ACCENT_AMBER: Color32 = Color32::from_rgb(245, 158, 11);
 
 pub const COLOR_TEXT_PRIMARY: Color32 = Color32::from_rgb(240, 244, 248);
 pub const COLOR_TEXT_MUTED: Color32 = Color32::from_rgb(139, 155, 180);
@@ -22,19 +23,19 @@ pub fn setup_custom_theme(ctx: &Context) {
 
     visuals.widgets.noninteractive.bg_fill = COLOR_SURFACE_CARD;
     visuals.widgets.noninteractive.bg_stroke = Stroke::new(1.0, COLOR_BORDER_CARD);
-    visuals.widgets.noninteractive.corner_radius = CornerRadius::same(8);
+    visuals.widgets.noninteractive.corner_radius = CornerRadius::same(6);
 
     visuals.widgets.inactive.bg_fill = COLOR_SURFACE_INPUT;
     visuals.widgets.inactive.bg_stroke = Stroke::new(1.0, COLOR_BORDER_CARD);
-    visuals.widgets.inactive.corner_radius = CornerRadius::same(6);
+    visuals.widgets.inactive.corner_radius = CornerRadius::same(5);
 
     visuals.widgets.hovered.bg_fill = Color32::from_rgb(25, 35, 55);
     visuals.widgets.hovered.bg_stroke = Stroke::new(1.0, COLOR_ACCENT_CYAN);
-    visuals.widgets.hovered.corner_radius = CornerRadius::same(6);
+    visuals.widgets.hovered.corner_radius = CornerRadius::same(5);
 
     visuals.widgets.active.bg_fill = COLOR_ACCENT_CYAN;
     visuals.widgets.active.fg_stroke = Stroke::new(1.0, Color32::BLACK);
-    visuals.widgets.active.corner_radius = CornerRadius::same(6);
+    visuals.widgets.active.corner_radius = CornerRadius::same(5);
 
     ctx.set_visuals(visuals);
 }
@@ -43,14 +44,22 @@ pub fn card_frame() -> Frame {
     Frame::new()
         .fill(COLOR_SURFACE_CARD)
         .stroke(Stroke::new(1.0, COLOR_BORDER_CARD))
-        .corner_radius(CornerRadius::same(10))
-        .inner_margin(Margin::same(16))
+        .corner_radius(CornerRadius::same(8))
+        .inner_margin(Margin::symmetric(14, 10))
 }
 
 pub fn inner_box_frame() -> Frame {
     Frame::new()
         .fill(COLOR_SURFACE_INPUT)
         .stroke(Stroke::new(1.0, COLOR_BORDER_CARD))
-        .corner_radius(CornerRadius::same(8))
-        .inner_margin(Margin::same(12))
+        .corner_radius(CornerRadius::same(6))
+        .inner_margin(Margin::symmetric(10, 6))
+}
+
+pub fn pill_frame() -> Frame {
+    Frame::new()
+        .fill(COLOR_SURFACE_INPUT)
+        .stroke(Stroke::new(1.0, COLOR_BORDER_CARD))
+        .corner_radius(CornerRadius::same(4))
+        .inner_margin(Margin::symmetric(8, 4))
 }

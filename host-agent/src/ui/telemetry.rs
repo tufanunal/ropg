@@ -42,97 +42,111 @@ pub fn render_telemetry_card(ui: &mut Ui, state: &Arc<HostSharedState>) {
     };
 
     card_frame().show(ui, |ui| {
+        ui.label(
+            RichText::new("LIVE TELEMETRY & SYSTEM METRICS")
+                .color(COLOR_ACCENT_CYAN)
+                .strong()
+                .size(12.5),
+        );
+        ui.add_space(4.0);
+
         ui.horizontal(|ui| {
-            ui.heading(
-                RichText::new("📊 Live Telemetry & Metrics")
-                    .color(COLOR_TEXT_PRIMARY)
-                    .strong()
-                    .size(15.0),
-            );
-            ui.add_space(8.0);
-            ui.label(
-                RichText::new("Real-time network throughput and cell diffing stats")
-                    .color(COLOR_TEXT_MUTED)
-                    .size(12.0),
-            );
-        });
+            let total_width = ui.available_width();
+            let left_width = (total_width * 0.44).clamp(320.0, 480.0);
+            let right_width = (total_width - left_width - 14.0).max(400.0);
 
-        ui.add_space(8.0);
-
-        // 60-second Rolling Upload Bandwidth Sparkline Chart
-        render_sparkline(ui, &history, kb_s, peak_kb_s);
-
-        ui.add_space(12.0);
-
-        // 6 Metric Stat Boxes in 3x2 Grid
-        Grid::new("telemetry_grid_boxes")
-            .num_columns(3)
-            .spacing([12.0, 12.0])
-            .show(ui, |ui| {
-                render_stat_box(
-                    ui,
-                    "Current Bandwidth",
-                    &format!("{:.1} KB/s", kb_s),
-                    &format!("Peak: {:.1} KB/s", peak_kb_s),
-                    COLOR_ACCENT_CYAN,
+            // Left side: Sparkline graph
+            ui.allocate_ui(vec2(left_width, 94.0), |ui| {
+                ui.label(
+                    RichText::new("Upload Bandwidth History (KB/s)")
+                        .color(COLOR_TEXT_MUTED)
+                        .size(10.0),
                 );
-                render_stat_box(
-                    ui,
-                    "Grid Cell Updates",
-                    &format!("{} cells/s", cells_s),
-                    &format!("{:.1}% of screen dirty", dirty_percent),
-                    COLOR_ACCENT_BLUE,
-                );
-                render_stat_box(
-                    ui,
-                    "Total Payload Sent",
-                    &format!("{:.2} MB", total_bytes as f64 / 1_048_576.0),
-                    &format!("{} bytes", total_bytes),
-                    COLOR_TEXT_PRIMARY,
-                );
-                ui.end_row();
-
-                render_stat_box(
-                    ui,
-                    "Last Input Command",
-                    &last_input,
-                    &format!("Sequence ID: {}", last_seq),
-                    COLOR_ACCENT_GREEN,
-                );
-                render_stat_box(
-                    ui,
-                    "Grid Partition",
-                    &format!("{} x {} Grid", grid_cfg.cols, grid_cfg.rows),
-                    &format!("{} Total Cells ({}x{}px)", grid_cfg.total_cells, grid_cfg.cell_width, grid_cfg.cell_height),
-                    COLOR_TEXT_PRIMARY,
-                );
-                render_stat_box(
-                    ui,
-                    "Network Latency",
-                    &format!("{} ms", rtt_ms),
-                    "HTTP GET/POST RTT",
-                    COLOR_ACCENT_GREEN,
-                );
-                ui.end_row();
+                ui.add_space(2.0);
+                render_sparkline(ui, &history, kb_s, peak_kb_s, left_width, 76.0);
             });
+
+            ui.add_space(8.0);
+
+            // Right side: 6 Metric Stat Boxes in 3 columns x 2 rows
+            let box_width = ((right_width - 16.0) / 3.0).max(110.0);
+            ui.allocate_ui(vec2(right_width, 94.0), |ui| {
+                Grid::new("telemetry_grid_boxes")
+                    .num_columns(3)
+                    .spacing([8.0, 6.0])
+                    .show(ui, |ui| {
+                        render_stat_box(
+                            ui,
+                            box_width,
+                            "Current Bandwidth",
+                            &format!("{:.1} KB/s", kb_s),
+                            &format!("Peak: {:.1} KB/s", peak_kb_s),
+                            COLOR_ACCENT_CYAN,
+                        );
+                        render_stat_box(
+                            ui,
+                            box_width,
+                            "Grid Cell Updates",
+                            &format!("{} cells/s", cells_s),
+                            &format!("{:.1}% of total screen", dirty_percent),
+                            COLOR_ACCENT_BLUE,
+                        );
+                        render_stat_box(
+                            ui,
+                            box_width,
+                            "Total Payload Sent",
+                            &format!("{:.2} MB", total_bytes as f64 / 1_048_576.0),
+                            &format!("{} bytes", total_bytes),
+                            COLOR_TEXT_PRIMARY,
+                        );
+                        ui.end_row();
+
+                        render_stat_box(
+                            ui,
+                            box_width,
+                            "Last Input Command",
+                            &last_input,
+                            &format!("seq: {}", last_seq),
+                            COLOR_ACCENT_GREEN,
+                        );
+                        render_stat_box(
+                            ui,
+                            box_width,
+                            "Grid Partition",
+                            &format!("{} cells", grid_cfg.total_cells),
+                            &format!("{} cols x {} rows", grid_cfg.cols, grid_cfg.rows),
+                            COLOR_TEXT_PRIMARY,
+                        );
+                        render_stat_box(
+                            ui,
+                            box_width,
+                            "Network Latency",
+                            &format!("{} ms", rtt_ms),
+                            "HTTP GET / POST RTT",
+                            COLOR_ACCENT_GREEN,
+                        );
+                        ui.end_row();
+                    });
+            });
+        });
     });
 }
 
-fn render_sparkline(ui: &mut Ui, history: &[f32], current_kb_s: f32, peak_kb_s: f32) {
-    let desired_size = vec2(ui.available_width(), 100.0);
+fn render_sparkline(ui: &mut Ui, history: &[f32], current_kb_s: f32, peak_kb_s: f32, width: f32, height: f32) {
+    let desired_size = vec2(width, height);
     let (rect, _response) = ui.allocate_exact_size(desired_size, Sense::hover());
     let painter = ui.painter_at(rect);
 
-    // Background and border
-    painter.rect_filled(rect, 8.0, COLOR_SURFACE_INPUT);
-    painter.rect_stroke(rect, 8.0, Stroke::new(1.0, COLOR_BORDER_CARD), eframe::egui::StrokeKind::Inside);
+    // Background and subtle border
+    painter.rect_filled(rect, 6.0, COLOR_SURFACE_INPUT);
+    painter.rect_stroke(rect, 6.0, Stroke::new(1.0, COLOR_BORDER_CARD), eframe::egui::StrokeKind::Inside);
 
-    // Horizontal grid guidelines
-    for i in 1..4 {
-        let y = rect.top() + (rect.height() / 4.0) * i as f32;
+    // Subtle horizontal grid guidelines
+    for i in 1..3 {
+        let y = rect.top() + (rect.height() / 3.0) * i as f32;
         painter.line_segment(
-            [Pos2::new(rect.left() + 6.0, y), Pos2::new(rect.right() - 6.0, y)],
-            Stroke::new(0.5, COLOR_BORDER_CARD),
+            [Pos2::new(rect.left() + 4.0, y), Pos2::new(rect.right() - 4.0, y)],
+            Stroke::new(0.5, Color32::from_rgb(20, 28, 42)),
         );
     }
 
@@ -150,10 +164,10 @@ fn render_sparkline(ui: &mut Ui, history: &[f32], current_kb_s: f32, peak_kb_s: 
     if peak_kb_s > max_val {
         max_val = peak_kb_s;
     }
-    max_val *= 1.15; // 15% headroom
+    max_val *= 1.12;
 
-    let pad_x = 10.0;
-    let pad_y = 10.0;
+    let pad_x = 8.0;
+    let pad_y = 6.0;
     let plot_w = (rect.width() - pad_x * 2.0).max(1.0);
     let plot_h = (rect.height() - pad_y * 2.0).max(1.0);
 
@@ -167,7 +181,7 @@ fn render_sparkline(ui: &mut Ui, history: &[f32], current_kb_s: f32, peak_kb_s: 
         points.push(Pos2::new(x, y));
     }
 
-    // Semi-transparent gradient/area fill below sparkline
+    // Semi-transparent gradient/area fill below sparkline matching reference
     if points.len() >= 2 {
         let mut fill_points = Vec::with_capacity(points.len() + 2);
         fill_points.push(Pos2::new(points[0].x, rect.bottom() - pad_y));
@@ -176,58 +190,57 @@ fn render_sparkline(ui: &mut Ui, history: &[f32], current_kb_s: f32, peak_kb_s: 
 
         painter.add(PathShape::convex_polygon(
             fill_points,
-            Color32::from_rgba_unmultiplied(0, 240, 255, 30),
+            Color32::from_rgba_unmultiplied(225, 250, 255, 220),
             Stroke::NONE,
         ));
 
         // Line stroke
         painter.add(PathShape::line(
             points.clone(),
-            Stroke::new(2.0, COLOR_ACCENT_CYAN),
+            Stroke::new(1.5, COLOR_ACCENT_CYAN),
         ));
 
-        // Glowing indicator circle at the latest point
+        // Latest value dot
         if let Some(&last_pt) = points.last() {
-            painter.circle_filled(last_pt, 4.0, COLOR_ACCENT_CYAN);
-            painter.circle_stroke(last_pt, 6.0, Stroke::new(1.0, Color32::from_rgba_unmultiplied(0, 240, 255, 120)));
+            painter.circle_filled(last_pt, 3.5, COLOR_ACCENT_CYAN);
         }
     }
 
-    // Chart telemetry overlay labels
+    // Telemetry text overlay
     painter.text(
-        Pos2::new(rect.left() + 12.0, rect.top() + 8.0),
+        Pos2::new(rect.left() + 8.0, rect.top() + 5.0),
         eframe::egui::Align2::LEFT_TOP,
         format!("LIVE: {:.1} KB/s", current_kb_s),
-        eframe::egui::FontId::monospace(11.0),
-        COLOR_ACCENT_CYAN,
+        eframe::egui::FontId::monospace(10.0),
+        Color32::from_rgb(15, 23, 42),
     );
     painter.text(
-        Pos2::new(rect.right() - 12.0, rect.top() + 8.0),
+        Pos2::new(rect.right() - 8.0, rect.top() + 5.0),
         eframe::egui::Align2::RIGHT_TOP,
         format!("MAX: {:.1} KB/s", max_val),
-        eframe::egui::FontId::monospace(10.0),
+        eframe::egui::FontId::monospace(9.0),
         COLOR_TEXT_MUTED,
     );
 }
 
 fn render_stat_box(
     ui: &mut Ui,
+    width: f32,
     title: &str,
     primary_val: &str,
     subtitle: &str,
     val_color: Color32,
 ) {
     inner_box_frame().show(ui, |ui| {
-        ui.set_width(170.0);
-        ui.label(RichText::new(title).color(COLOR_TEXT_MUTED).size(11.0));
-        ui.add_space(2.0);
+        ui.set_width(width);
+        ui.label(RichText::new(title).color(COLOR_TEXT_MUTED).size(10.0));
+        ui.add_space(1.0);
         ui.label(
             RichText::new(primary_val)
                 .color(val_color)
                 .strong()
-                .size(15.0),
+                .size(13.0),
         );
-        ui.add_space(2.0);
-        ui.label(RichText::new(subtitle).color(COLOR_TEXT_MUTED).size(10.0));
+        ui.label(RichText::new(subtitle).color(COLOR_TEXT_MUTED).size(8.5));
     });
 }
